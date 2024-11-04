@@ -16,7 +16,7 @@ src/
 │   ├── Parser/                    # Parser implementation
 │   │   ├── Parser.cs              # Implementation of Parser
 │   │   └── StandardParser.cs      # Standard implementation with Roslyn API
-├── MiniCSharpCompiler.Main/       # Main project for the compiler
+├── MiniCSharpCompiler/            # Console application for the compiler
 │   ├── Utilities/                 # Utility classes
 │   │   └── SyntaxPrinter.cs       # Helper class for printing syntax tree
 │   └── Program.cs                 # Entry point of the compiler
@@ -33,8 +33,8 @@ src/
 ## Usage
 
 ```sh
-cd src
-dotnet run --project MiniCSharpCompiler [<source-file>]
+cd src/MiniCSharpCompiler/
+dotnet run -- [source-file]
 ```
 
 You can run the compiler with the source file as an argument. If you don't provide the source file, the compiler will read the source code from the console input.

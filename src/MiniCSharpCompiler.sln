@@ -5,7 +5,7 @@ VisualStudioVersion = 17.0.31903.59
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "MiniCSharpCompiler.Core", "MiniCSharpCompiler.Core\MiniCSharpCompiler.Core.csproj", "{0F3CE5A8-CF7D-4F5B-A9DE-FA374D2B6109}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "MiniCSharpCompiler.Main", "MiniCSharpCompiler\MiniCSharpCompiler.Main.csproj", "{F5E1AE4F-4C5F-4F14-893F-697A96679B13}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "MiniCSharpCompiler", "MiniCSharpCompiler\MiniCSharpCompiler.csproj", "{F5E1AE4F-4C5F-4F14-893F-697A96679B13}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
