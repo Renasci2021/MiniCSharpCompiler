@@ -1,4 +1,6 @@
-﻿using MiniCSharpCompiler.Core.Interfaces;
+﻿// * 这个文件先给大家调试用，不要提交
+
+using MiniCSharpCompiler.Core.Interfaces;
 using MiniCSharpCompiler.Core.Lexer;
 using MiniCSharpCompiler.Core.Parser;
 using MiniCSharpCompiler.Utilities;
@@ -29,10 +31,17 @@ class Program
             IParser parser = new StandardParser();
 
             // 打印 Token 流
-            SyntaxPrinter.PrintTokens(lexer, sourceCode);
+            SyntaxPrinter.PrintTokens(lexer.Tokenize(sourceCode), printTrivia: true);
 
             // 打印抽象语法树
-            SyntaxPrinter.PrintSyntaxTree(parser, sourceCode);
+            SyntaxPrinter.PrintSyntaxTree(parser.Parse(sourceCode), printTrivia: true);
+
+            // 生成示例语法树
+            var sampleParser = new SampleParser();
+            var syntaxTree = sampleParser.Parse(sourceCode);
+
+            // 打印生成的语法树
+            SyntaxPrinter.PrintSyntaxTree(syntaxTree, printTrivia: true);
         }
         catch (Exception ex)
         {

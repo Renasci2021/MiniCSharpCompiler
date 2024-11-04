@@ -1,37 +1,28 @@
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
-using MiniCSharpCompiler.Core.Interfaces;
 
 namespace MiniCSharpCompiler.Utilities;
 
 public static class SyntaxPrinter
 {
-    public static void PrintTokens(ILexer lexer, string sourceCode)
+    public static void PrintTokens(IEnumerable<SyntaxToken> tokens, bool printTrivia = false)
     {
-        var tokens = lexer.Tokenize(sourceCode);
-        Console.WriteLine("\n--- Tokens ---");
+        Console.WriteLine("--- Tokens ---");
         foreach (var token in tokens)
         {
-            if (token is SyntaxToken syntaxToken)
-            {
-                var lineSpan = syntaxToken.GetLocation().GetLineSpan();
-
-                Console.WriteLine($"{syntaxToken.Kind()}: {syntaxToken.Text} " +
-                    $"[{lineSpan.StartLinePosition.Line + 1}:{lineSpan.StartLinePosition.Character + 1}, " +
-                    $"{lineSpan.EndLinePosition.Line + 1}:{lineSpan.EndLinePosition.Character + 1})");
-            }
+            if (printTrivia) PrintTrivia(token.LeadingTrivia, 0, "Leading");
+            Console.WriteLine($"{token.Kind()}: {token.Text} [{token.Span.Start}, {token.Span.End})");
+            if (printTrivia) PrintTrivia(token.TrailingTrivia, 0, "Trailing");
         }
     }
 
-    public static void PrintSyntaxTree(IParser parser, string sourceCode)
+    public static void PrintSyntaxTree(SyntaxTree syntaxTree, bool printTrivia = false)
     {
-        var syntaxTree = parser.Parse(sourceCode);
-        var root = syntaxTree.GetRoot();
-        Console.WriteLine("\n--- Syntax Tree ---");
-        PrintSyntaxNode(root, 0);
+        Console.WriteLine("--- Syntax Tree ---");
+        PrintSyntaxNode(syntaxTree.GetRoot(), 0, printTrivia);
     }
 
-    private static void PrintSyntaxNode(SyntaxNode node, int indentLevel)
+    private static void PrintSyntaxNode(SyntaxNode node, int indentLevel, bool printTrivia)
     {
         var indent = new string(' ', indentLevel * 2);
         Console.WriteLine($"{indent}<{node.Kind()}>");
@@ -40,24 +31,34 @@ public static class SyntaxPrinter
         {
             if (child.IsNode)
             {
-                var childNode = child.AsNode();
-                if (childNode != null)
-                {
-                    PrintSyntaxNode(childNode, indentLevel + 1);
-                }
+                PrintSyntaxNode(child.AsNode()!, indentLevel + 1, printTrivia);
             }
             else
             {
-                PrintSyntaxToken(child.AsToken(), indentLevel + 1);
+                PrintSyntaxToken(child.AsToken(), indentLevel + 1, printTrivia);
             }
         }
 
         Console.WriteLine($"{indent}</{node.Kind()}>");
     }
 
-    private static void PrintSyntaxToken(SyntaxToken token, int indentLevel)
+    private static void PrintSyntaxToken(SyntaxToken token, int indentLevel, bool printTrivia)
     {
+        if (printTrivia) PrintTrivia(token.LeadingTrivia, indentLevel, "Leading");
         var indent = new string(' ', indentLevel * 2);
-        Console.WriteLine($"{indent}<{token.Kind()}> {token} </{token.Kind()}>");
+        Console.WriteLine($"{indent}<{token.Kind()}> {token} </{token.Kind()}> [{token.Span.Start}, {token.Span.End})");
+        if (printTrivia) PrintTrivia(token.TrailingTrivia, indentLevel, "Trailing");
+    }
+
+    private static void PrintTrivia(SyntaxTriviaList triviaList, int indentLevel, string triviaType)
+    {
+        Console.ForegroundColor = ConsoleColor.DarkGray;
+        var indent = new string(' ', indentLevel * 2);
+        foreach (var trivia in triviaList)
+        {
+            Console.WriteLine($"{indent}{(triviaType[0] == 'L' ? "↓" : "↑")} {triviaType} " +
+                $"Trivia: {trivia.Kind()} [{trivia.Span.Start}, {trivia.Span.End})");
+        }
+        Console.ResetColor();
     }
 }
