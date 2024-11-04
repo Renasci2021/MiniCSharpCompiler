@@ -1,9 +1,9 @@
 ﻿using MiniCSharpCompiler.Core.Interfaces;
 using MiniCSharpCompiler.Core.Lexer;
 using MiniCSharpCompiler.Core.Parser;
-using MiniCSharpCompiler.Main.Utilities;
+using MiniCSharpCompiler.Utilities;
 
-namespace MiniCSharpCompiler.Main;
+namespace MiniCSharpCompiler;
 
 class Program
 {

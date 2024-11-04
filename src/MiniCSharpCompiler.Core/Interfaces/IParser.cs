@@ -1,9 +1,8 @@
 using Microsoft.CodeAnalysis;
 
-namespace MiniCSharpCompiler.Core.Interfaces
+namespace MiniCSharpCompiler.Core.Interfaces;
+
+public interface IParser
 {
-    public interface IParser
-    {
-        SyntaxTree Parse(string sourceCode);
-    }
+    SyntaxTree Parse(string sourceCode);
 }

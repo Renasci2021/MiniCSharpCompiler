@@ -2,7 +2,7 @@ using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using MiniCSharpCompiler.Core.Interfaces;
 
-namespace MiniCSharpCompiler.Main.Utilities;
+namespace MiniCSharpCompiler.Utilities;
 
 public static class SyntaxPrinter
 {
