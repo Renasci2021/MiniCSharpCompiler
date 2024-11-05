@@ -1,6 +1,5 @@
-﻿// * 这个文件先给大家调试用，不要提交
+﻿// * 这个文件先给大家调试用，随意改动，不用提交
 
-using MiniCSharpCompiler.Core.Interfaces;
 using MiniCSharpCompiler.Core.Lexer;
 using MiniCSharpCompiler.Core.Parser;
 using MiniCSharpCompiler.Utilities;
@@ -26,21 +25,19 @@ class Program
 
         try
         {
-            // 创建 Lexer 和 Parser 实例
-            ILexer lexer = new StandardLexer();
-            IParser parser = new StandardParser();
-
             // 打印 Token 流
-            SyntaxPrinter.PrintTokens(lexer.Tokenize(sourceCode), printTrivia: true);
+            var standardLexer = new StandardLexer();
+            var tokens = standardLexer.Tokenize(sourceCode);
+            SyntaxPrinter.PrintTokens(tokens, printTrivia: true);
 
-            // 打印抽象语法树
-            SyntaxPrinter.PrintSyntaxTree(parser.Parse(sourceCode), printTrivia: true);
+            // 查看标准抽象语法树
+            var standardParser = new StandardParser();
+            var standardSyntaxTree = standardParser.Parse(sourceCode);
+            SyntaxPrinter.PrintSyntaxTree(standardSyntaxTree, printTrivia: true);
 
-            // 生成示例语法树
-            var sampleParser = new SampleParser();
-            var syntaxTree = sampleParser.Parse(sourceCode);
-
-            // 打印生成的语法树
+            // 组合 Lexer 和 Parser 进行分析
+            var lexer = new Lexer();
+            var syntaxTree = standardParser.Parse(lexer, sourceCode);
             SyntaxPrinter.PrintSyntaxTree(syntaxTree, printTrivia: true);
         }
         catch (Exception ex)

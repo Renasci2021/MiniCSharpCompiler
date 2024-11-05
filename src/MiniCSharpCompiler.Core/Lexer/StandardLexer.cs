@@ -1,4 +1,3 @@
-using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using MiniCSharpCompiler.Core.Interfaces;
 
@@ -6,10 +5,20 @@ namespace MiniCSharpCompiler.Core.Lexer;
 
 public class StandardLexer : ILexer
 {
-    public IEnumerable<SyntaxToken> Tokenize(string sourceCode)
+    public IEnumerable<Token> Tokenize(string sourceCode)
     {
-        // 使用 Roslyn 的解析器来解析源代码
+        var tokens = new List<Token>();
         var syntaxTree = CSharpSyntaxTree.ParseText(sourceCode);
-        return syntaxTree.GetRoot().DescendantTokens();
+        var syntaxTokens = syntaxTree.GetRoot().DescendantTokens();
+        foreach (var syntaxToken in syntaxTokens)
+        {
+            var token = new Token(syntaxToken.Kind(), syntaxToken.ValueText)
+            {
+                LeadingTrivia = syntaxToken.LeadingTrivia,
+                TrailingTrivia = syntaxToken.TrailingTrivia
+            };
+            tokens.Add(token);
+        }
+        return tokens;
     }
 }

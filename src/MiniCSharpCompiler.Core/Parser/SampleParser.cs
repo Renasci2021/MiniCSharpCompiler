@@ -2,7 +2,7 @@ using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 using MiniCSharpCompiler.Core.Interfaces;
-
+using MiniCSharpCompiler.Core.Lexer;
 using static Microsoft.CodeAnalysis.CSharp.SyntaxFactory;
 
 namespace MiniCSharpCompiler.Core.Parser;
@@ -21,7 +21,7 @@ namespace MiniCSharpCompiler.Core.Parser;
 public class SampleParser : IParser
 {
 
-    public SyntaxTree Parse(string _)
+    public static SyntaxTree GenerateSyntaxTree()
     {
         return SyntaxTree(
 CompilationUnit()
@@ -98,5 +98,20 @@ CompilationUnit()
         SyntaxKind.EndOfFileToken,
         TriviaList()))
       );
+    }
+
+    public SyntaxTree Parse(IEnumerable<Token> _)
+    {
+        return GenerateSyntaxTree();
+    }
+
+    public SyntaxTree Parse(string _)
+    {
+        return GenerateSyntaxTree();
+    }
+
+    public SyntaxTree Parse(ILexer lexer, string _)
+    {
+        return GenerateSyntaxTree();
     }
 }

@@ -1,8 +1,8 @@
-using Microsoft.CodeAnalysis;
+using MiniCSharpCompiler.Core.Lexer;
 
 namespace MiniCSharpCompiler.Core.Interfaces;
 
 public interface ILexer
 {
-    IEnumerable<SyntaxToken> Tokenize(string sourceCode);
+    IEnumerable<Token> Tokenize(string sourceCode);
 }
