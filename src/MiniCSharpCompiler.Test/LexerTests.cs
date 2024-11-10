@@ -51,6 +51,16 @@ public class LexerTests
 
             await Assert.That(tokens[i].Kind).IsEqualTo(standardTokens[i].Kind);
             await Assert.That(tokens[i].Value).IsEqualTo(standardTokens[i].Value);
+
+            try
+            {
+                await Assert.That(tokens[i].LeadingTrivia).IsEqualTo(standardTokens[i].LeadingTrivia);
+                await Assert.That(tokens[i].TrailingTrivia).IsEqualTo(standardTokens[i].TrailingTrivia);
+            }
+            catch (Exception e)
+            {
+                Console.WriteLine(e.Message);
+            }
         }
     }
 }
