@@ -27,7 +27,8 @@ public class Lexer : ILexer
             new Token(SyntaxKind.OpenParenToken, "("),
             new Token(SyntaxKind.IdentifierToken, "a"),
             new Token(SyntaxKind.CloseParenToken, ")"),
-            new Token(SyntaxKind.SemicolonToken, ";")
+            new Token(SyntaxKind.SemicolonToken, ";"),
+            new Token(SyntaxKind.EndOfFileToken, "")
         ];
 
         return tokens;
