@@ -6,21 +6,25 @@ A simple C# compiler implementation for learning compiler principles. This proje
 
 ```
 src/
-├── MiniCSharpCompiler.Core/       # Core library for the compiler
-│   ├── Interfaces/                # Interfaces for Lexer and Parser
+├── MiniCSharpCompiler.Core/
+│   ├── Interfaces/
 │   │   ├── ILexer.cs              # Interface for Lexer
 │   │   └── IParser.cs             # Interface for Parser
-│   ├── Lexer/                     # Lexer implementation
+│   ├── Lexer/
 │   │   ├── Lexer.cs               # Implementation of Lexer
-│   │   └── StandardLexer.cs       # Standard implementation with Roslyn API
-│   ├── Parser/                    # Parser implementation
+│   │   ├── StandardLexer.cs       # Standard implementation with Roslyn API
+│   │   └── Token.cs               # Token definition
+│   ├── Parser/
 │   │   ├── Parser.cs              # Implementation of Parser
 │   │   └── StandardParser.cs      # Standard implementation with Roslyn API
-├── MiniCSharpCompiler/            # Console application for the compiler
-│   ├── Utilities/                 # Utility classes
+├── MiniCSharpCompiler/
+│   ├── Utilities/
 │   │   └── SyntaxPrinter.cs       # Helper class for printing syntax tree
 │   └── Program.cs                 # Entry point of the compiler
-└── README.md                      # Project documentation
+├── MiniCSharpCompiler.Test/
+│   ├── TestFiles/                 # Test source files
+│   └── LexerTests.cs              # Unit tests for Lexer
+README.md                          # This file
 ```
 
 ## Features (In Progress)
