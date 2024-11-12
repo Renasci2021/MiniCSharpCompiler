@@ -1,3 +1,5 @@
+using Microsoft.CodeAnalysis;
+using Microsoft.CodeAnalysis.CSharp;
 using MiniCSharpCompiler.Core.Lexer;
 
 namespace MiniCSharpCompiler.Tests;
@@ -52,14 +54,27 @@ public class LexerTests
             await Assert.That(tokens[i].Kind).IsEqualTo(standardTokens[i].Kind);
             await Assert.That(tokens[i].Value).IsEqualTo(standardTokens[i].Value);
 
-            try
+            checkTrivia(tokens[i].LeadingTrivia, standardTokens[i].LeadingTrivia);
+            checkTrivia(tokens[i].TrailingTrivia, standardTokens[i].TrailingTrivia);
+
+            async void checkTrivia(SyntaxTriviaList trivia, SyntaxTriviaList standardTrivia)
             {
-                await Assert.That(tokens[i].LeadingTrivia).IsEqualTo(standardTokens[i].LeadingTrivia);
-                await Assert.That(tokens[i].TrailingTrivia).IsEqualTo(standardTokens[i].TrailingTrivia);
-            }
-            catch (Exception e)
-            {
-                Console.WriteLine(e.Message);
+                await Assert.That(trivia.Count).IsEqualTo(standardTrivia.Count);
+
+                for (int j = 0; j < trivia.Count; j++)
+                {
+                    try
+                    {
+                        await Assert.That(trivia[j].Kind()).IsEqualTo(standardTrivia[j].Kind());
+                        await Assert.That(trivia[j].Span.Length).IsEqualTo(standardTrivia[j].Span.Length);
+                    }
+                    catch
+                    {
+                        Console.WriteLine($"Trivia {j}: {trivia[j].Kind()} - {trivia[j].Span.Length}");
+                        Console.WriteLine($"Standard Trivia {j}: {standardTrivia[j].Kind()} - {standardTrivia[j].Span.Length}");
+                        throw new Exception($"Error at trivia {j} of token {i}");
+                    }
+                }
             }
         }
     }
