@@ -17,6 +17,7 @@ namespace MiniCSharpCompiler.Core.Lexer
             var dollor=false;
             var braced=false;
             var openbrace=false;
+            var emptyList=false;
             var leadingTriviaDefinitions = new List<(Regex regex, Action<string> createTrivia)>
             {
                 (new Regex(@"^ +"), text => leadingTrivias.Add(SyntaxFactory.Whitespace(text))), // Skip whitespace
@@ -28,7 +29,7 @@ namespace MiniCSharpCompiler.Core.Lexer
             {
                 (new Regex(@"^ +"), text => trailingTrivias.Add(SyntaxFactory.Whitespace(text))), // Skip whitespace
                 (new Regex(@"^\r\n"), text => trailingTrivias.Add(SyntaxFactory.EndOfLine(text))), // Skip new line
-                (new Regex(@"^\/\/.*\n"), text =>{leadingTrivias.Add(SyntaxFactory.Comment(text.Substring(0,text.Length-3)));leadingTrivias.Add(SyntaxFactory.EndOfLine("\r\n"));}), // Skip single-line comments
+                (new Regex(@"^\/\/.*\n"), text =>{trailingTrivias.Add(SyntaxFactory.Comment(text.Substring(0,text.Length-2)));}), // Skip single-line comments
                 (new Regex(@"^/\*.*?\*/", RegexOptions.Singleline), text =>trailingTrivias.Add(SyntaxFactory.Comment(text))), // Skip multi-line comments
             };
             var tokenDefinitions = new List<(Regex regex, Func<string, Token> createToken)>
@@ -203,7 +204,7 @@ namespace MiniCSharpCompiler.Core.Lexer
             {
                 //leading trivia
                 var match = false;
-                List<string> stringList = new List<string>();
+                // List<string> stringList = new List<string>();
                 var mark = true;
                 while (mark)
                 {
@@ -215,18 +216,24 @@ namespace MiniCSharpCompiler.Core.Lexer
                         {
                             createTrivia(matchResult.Value);
                             position += matchResult.Length;
-                            match = true;
+                            // match = true;
                             mark = true;
                             break;
                         }
                     }
                 }
+                // var matched=false;
                 foreach (var (regex, createToken) in tokenDefinitions)
                 {
                     var matchResult = regex.Match(sourceCode.Substring(position));
                     // Console.WriteLine(sourceCode.Substring(position));
                     if (matchResult.Success)
                     {
+                        // matched=true;
+                        if(matchResult.Value == "["&&sourceCode[position+1]==']')
+                        {
+                            emptyList = true;
+                        }
                         if(dollor){
                             if(matchResult.Value == @"""")
                             {
@@ -272,6 +279,8 @@ namespace MiniCSharpCompiler.Core.Lexer
                                 if (matchResult1.Success)
                                 {
                                     createTrivia(matchResult1.Value);
+                                    if(matchResult1.Value.Length>1&&matchResult1.Value[1] == '/')
+                                        position-=2;
                                     position += matchResult1.Length;
                                     match = true;
                                     if(matchResult1.Value != "\r\n")
@@ -283,11 +292,11 @@ namespace MiniCSharpCompiler.Core.Lexer
                         var token = createToken(openbrace?matchResult.Value.Substring(0,matchResult.Value.Length-1):matchResult.Value);
                         tokens.Add(token);
                         openbrace = false;
-                        // if(matchResult.Value == "["&&sourceCode[position+1])
-                        // {
-                        //     openbrace = true;
-                        // }
-                        // position += matchResult.Length;
+                        if(emptyList)
+                        {
+                            tokens.Add(new Token(SyntaxKind.OmittedArraySizeExpressionToken, ""));
+                            emptyList = false;
+                        }
                         match = true;
                         break;
                     }
@@ -296,6 +305,12 @@ namespace MiniCSharpCompiler.Core.Lexer
                 if (!match)
                 {
                     // Handle unexpected characters
+                    
+                        tokens.Add(new Token(SyntaxKind.EndOfLineTrivia, ""){
+                            LeadingTrivia = new SyntaxTriviaList(leadingTrivias),
+                            TrailingTrivia = new SyntaxTriviaList(trailingTrivias)
+                        });
+                    
                     position++;
                 }
                 leadingTrivias.Clear();
