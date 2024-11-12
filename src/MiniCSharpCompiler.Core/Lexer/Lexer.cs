@@ -14,6 +14,9 @@ namespace MiniCSharpCompiler.Core.Lexer
             var tokens = new List<Token>();
             var leadingTrivias = new List<SyntaxTrivia>();
             var trailingTrivias = new List<SyntaxTrivia>();
+            var dollor=false;
+            var braced=false;
+            var openbrace=false;
             var leadingTriviaDefinitions = new List<(Regex regex, Action<string> createTrivia)>
             {
                 (new Regex(@"^ +"), text => leadingTrivias.Add(SyntaxFactory.Whitespace(text))), // Skip whitespace
@@ -50,6 +53,16 @@ namespace MiniCSharpCompiler.Core.Lexer
                             TrailingTrivia = new SyntaxTriviaList(trailingTrivias)
                         };
                 }),
+                (new Regex(@"^\$"""), text => new Token(SyntaxKind.InterpolatedStringStartToken, text)
+                {
+                    
+                    LeadingTrivia = new SyntaxTriviaList(leadingTrivias),
+                    TrailingTrivia = new SyntaxTriviaList(trailingTrivias)
+                }),
+                (new Regex(@"^'.'"), text => new Token(SyntaxKind.CharacterLiteralToken, text.Substring(1,1)){
+                            LeadingTrivia = new SyntaxTriviaList(leadingTrivias),
+                            TrailingTrivia = new SyntaxTriviaList(trailingTrivias)
+                        }),
                 (new Regex(@"^@?""[^""]*"""), text =>
                 {
                     if (text.StartsWith("@"))
@@ -64,6 +77,22 @@ namespace MiniCSharpCompiler.Core.Lexer
                             TrailingTrivia = new SyntaxTriviaList(trailingTrivias)
                         };
                 }),
+                (new Regex(@"^"""), text => new Token(SyntaxKind.InterpolatedStringEndToken, text){
+                            LeadingTrivia = new SyntaxTriviaList(leadingTrivias),
+                            TrailingTrivia = new SyntaxTriviaList(trailingTrivias)
+                        }),
+                (new Regex(@"^\{"), text => new Token(SyntaxKind.OpenBraceToken, text){
+                            LeadingTrivia = new SyntaxTriviaList(leadingTrivias),
+                            TrailingTrivia = new SyntaxTriviaList(trailingTrivias)
+                        }),
+                (new Regex(@"^\}"), text => new Token(SyntaxKind.CloseBraceToken, text){
+                            LeadingTrivia = new SyntaxTriviaList(leadingTrivias),
+                            TrailingTrivia = new SyntaxTriviaList(trailingTrivias)
+                        }),
+                (new Regex(@"^[^""]*?\{"), text => new Token(SyntaxKind.InterpolatedStringTextToken, text){
+                            LeadingTrivia = new SyntaxTriviaList(leadingTrivias),
+                            TrailingTrivia = new SyntaxTriviaList(trailingTrivias)
+                        }),        
                 // (new Regex(@"^//.*"), text => new Token(SyntaxKind. SingleLineCommentTrivia, text)), // Skip single-line comments
                 // (new Regex(@"^/\*.*?\*/", RegexOptions.Singleline), text => new Token(SyntaxKind.MultiLineCommentTrivia, text)), // Skip multi-line comments
                 (new Regex(@"^;"), text => new Token(SyntaxKind.SemicolonToken, text){
@@ -106,14 +135,7 @@ namespace MiniCSharpCompiler.Core.Lexer
                             LeadingTrivia = new SyntaxTriviaList(leadingTrivias),
                             TrailingTrivia = new SyntaxTriviaList(trailingTrivias)
                         }),
-                (new Regex(@"^\{"), text => new Token(SyntaxKind.OpenBraceToken, text){
-                            LeadingTrivia = new SyntaxTriviaList(leadingTrivias),
-                            TrailingTrivia = new SyntaxTriviaList(trailingTrivias)
-                        }),
-                (new Regex(@"^\}"), text => new Token(SyntaxKind.CloseBraceToken, text){
-                            LeadingTrivia = new SyntaxTriviaList(leadingTrivias),
-                            TrailingTrivia = new SyntaxTriviaList(trailingTrivias)
-                        }),
+                
                 (new Regex(@"^\["), text => new Token(SyntaxKind.OpenBracketToken, text){
                             LeadingTrivia = new SyntaxTriviaList(leadingTrivias),
                             TrailingTrivia = new SyntaxTriviaList(trailingTrivias)
@@ -130,7 +152,15 @@ namespace MiniCSharpCompiler.Core.Lexer
                             LeadingTrivia = new SyntaxTriviaList(leadingTrivias),
                             TrailingTrivia = new SyntaxTriviaList(trailingTrivias)
                         }),
+                (new Regex(@"^\+\+"), text => new Token(SyntaxKind.PlusPlusToken, text){
+                            LeadingTrivia = new SyntaxTriviaList(leadingTrivias),
+                            TrailingTrivia = new SyntaxTriviaList(trailingTrivias)
+                        }),
                 (new Regex(@"^\+"), text => new Token(SyntaxKind.PlusToken, text){
+                            LeadingTrivia = new SyntaxTriviaList(leadingTrivias),
+                            TrailingTrivia = new SyntaxTriviaList(trailingTrivias)
+                        }),
+                        (new Regex(@"^--"), text => new Token(SyntaxKind.MinusMinusToken, text){
                             LeadingTrivia = new SyntaxTriviaList(leadingTrivias),
                             TrailingTrivia = new SyntaxTriviaList(trailingTrivias)
                         }),
@@ -138,6 +168,7 @@ namespace MiniCSharpCompiler.Core.Lexer
                             LeadingTrivia = new SyntaxTriviaList(leadingTrivias),
                             TrailingTrivia = new SyntaxTriviaList(trailingTrivias)
                         }),
+                
                 (new Regex(@"^\*"), text => new Token(SyntaxKind.AsteriskToken, text){
                             LeadingTrivia = new SyntaxTriviaList(leadingTrivias),
                             TrailingTrivia = new SyntaxTriviaList(trailingTrivias)
@@ -196,7 +227,37 @@ namespace MiniCSharpCompiler.Core.Lexer
                     // Console.WriteLine(sourceCode.Substring(position));
                     if (matchResult.Success)
                     {
-            
+                        if(dollor){
+                            if(matchResult.Value == @"""")
+                            {
+                                dollor=false;
+                            }
+                            if(!braced&&dollor)
+                            {
+                                if(matchResult.Value[matchResult.Value.Length-1]!='{')
+                                    continue;
+                                else{
+                                    position--;
+                                    braced=true;
+                                    openbrace = true;
+                                }
+                            }
+                            if(matchResult.Value == "}")
+                            {
+                                braced=false;
+                            }
+                        }
+                        else{
+                            if(matchResult.Value[matchResult.Value.Length-1]=='{'&&matchResult.Value.Length>1)
+                            {
+                                continue;
+                            }
+                        }
+                        if(matchResult.Value == "$\"")
+                        {
+                            dollor = true;
+                        }
+                        
                         position += matchResult.Length;
                         //trailing trivia
                         mark = true;
@@ -219,9 +280,13 @@ namespace MiniCSharpCompiler.Core.Lexer
                                 }
                             }
                         }
-                        var token = createToken(matchResult.Value);
+                        var token = createToken(openbrace?matchResult.Value.Substring(0,matchResult.Value.Length-1):matchResult.Value);
                         tokens.Add(token);
-
+                        openbrace = false;
+                        // if(matchResult.Value == "["&&sourceCode[position+1])
+                        // {
+                        //     openbrace = true;
+                        // }
                         // position += matchResult.Length;
                         match = true;
                         break;

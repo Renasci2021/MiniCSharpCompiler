@@ -39,6 +39,7 @@ namespace MiniCSharpCompiler.Core.Lexer
             { "for", SyntaxKind.ForKeyword },
             { "foreach", SyntaxKind.ForEachKeyword },
             { "goto", SyntaxKind.GotoKeyword },
+            {"get",SyntaxKind.GetKeyword},
             { "if", SyntaxKind.IfKeyword },
             { "implicit", SyntaxKind.ImplicitKeyword },
             { "in", SyntaxKind.InKeyword },
