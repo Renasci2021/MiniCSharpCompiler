@@ -17,6 +17,16 @@ class Program
             Console.WriteLine("请从标准输入中输入源代码，结束输入请按 Ctrl+D (Unix) 或 Ctrl+Z (Windows)：");
             using var reader = new StreamReader(Console.OpenStandardInput());
             sourceCode = await reader.ReadToEndAsync();
+//             sourceCode = @"
+// using System;
+
+// class Program
+// {
+//     static void Main()
+//     {
+//         Console.WriteLine(""Hello"");
+//     }
+// }";
         }
         else
         {
@@ -35,14 +45,23 @@ class Program
             var standardSyntaxTree = standardParser.Parse(sourceCode);
             SyntaxPrinter.PrintSyntaxTree(standardSyntaxTree, printTrivia: true);
 
-            // 组合 Lexer 和 Parser 进行分析
-            var lexer = new Lexer();
-            var syntaxTree = standardParser.Parse(lexer, sourceCode);
-            SyntaxPrinter.PrintSyntaxTree(syntaxTree, printTrivia: true);
+            // // 组合 Lexer 和 Parser 进行分析
+            // var lexer = new Lexer();
+            // var syntaxTree = standardParser.Parse(lexer, sourceCode);
+            // SyntaxPrinter.PrintSyntaxTree(syntaxTree, printTrivia: true);
+
+            // 使用自定义的 Parser 进行分析
+            var parser_user = Parser.CreateParser(); //加载语法规则，终结符等
+            var lexer_user = new Lexer();
+            var tokens_user = lexer_user.Tokenize(sourceCode);
+            
+            // 使用自定义的 Parser 对tokens进行分析
+            // var syntaxTree_user = parser_user.Parse(tokens);
+            // SyntaxPrinter.PrintSyntaxTree(syntaxTree_user, printTrivia: true);
         }
         catch (Exception ex)
         {
             Console.WriteLine($"编译错误：{ex.Message}");
         }
-    }
+    }    
 }

@@ -11,4 +11,29 @@
     <PackageReference Include="Microsoft.CodeAnalysis.CSharp" Version="4.11.0" />
   </ItemGroup>
 
+  <ItemGroup>
+    <!-- <EmbeddedResource Include="Config\lexer_rules.json" /> -->
+    <EmbeddedResource Include="Config\grammar_rules.json" />
+    <EmbeddedResource Include="Config\terminal_symbols.json" />
+  </ItemGroup>
+
+  <!-- <ItemGroup>
+    <Content Include="Config\grammar_rules.json">
+        <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Content>
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Include="Config\grammar_rules.json">
+        <CopyToPublishDirectory>Always</CopyToPublishDirectory>
+    </None>
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Include="Config\terminal_symbols.json">
+        <CopyToPublishDirectory>Always</CopyToPublishDirectory>
+    </None>
+  </ItemGroup> -->
+
+
 </Project>

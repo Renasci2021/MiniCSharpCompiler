@@ -1,0 +1,23 @@
+{
+    "terminal_symbols": {
+      "UsingKeyword": "using",
+      "IdentifierToken": "<identifier>",
+      "SemicolonToken": ";",
+      "DOT_TOKEN": ".",
+      "ClassKeyword": "class",
+      "OPEN_BRACE_TOKEN": "{",
+      "CLOSE_BRACE_TOKEN": "}",
+      "STATIC_KEYWORD": "static",
+      "VOID_KEYWORD": "void",
+      "INT_KEYWORD": "int",
+      "STRING_KEYWORD": "string",
+      "OPEN_PAREN_TOKEN": "(",
+      "CLOSE_PAREN_TOKEN": ")",
+      "COMMA_TOKEN": ",",
+      "EQUALS_TOKEN": "=",
+      "STRING_LITERAL_TOKEN": "<string_literal>",
+      "INTEGER_LITERAL_TOKEN": "<integer_literal>",
+      "EMPTY": "<empty>"
+    }
+  }
+  

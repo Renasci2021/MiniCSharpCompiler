@@ -1,0 +1,178 @@
+[
+    {
+        "left": "COMPILATION_UNIT",
+        "right": [
+            ["USING_DIRECTIVE_LIST", "CLASS_DECLARATION", "END_OF_FILE_TOKEN"]
+        ]
+    },
+    {
+        "left": "USING_DIRECTIVE_LIST",
+        "right": [
+            ["USING_DIRECTIVE", "USING_DIRECTIVE_LIST"],
+            ["empty"]
+        ]
+    },
+    {
+        "left": "USING_DIRECTIVE",
+        "right": [
+            ["UsingKeyword", "IdentifierToken", "SemicolonToken"],
+            ["UsingKeyword", "QUALIFIED_NAME", "SemicolonToken"]
+        ]
+    },
+    {
+        "left": "QUALIFIED_NAME",
+        "right": [
+            ["IdentifierToken", "QUALIFIED_NAME_REST"],
+            ["IdentifierToken"]
+        ]
+    },
+    {
+        "left": "QUALIFIED_NAME_REST",
+        "right": [
+            ["DOT_TOKEN", "IdentifierToken", "QUALIFIED_NAME_REST"],
+            ["empty"]
+        ]
+    },
+    {
+        "left": "CLASS_DECLARATION",
+        "right": [
+            ["ClassKeyword", "IDENTIFIER_TOKEN", "OPEN_BRACE_TOKEN", "METHOD_DECLARATION_LIST", "CLOSE_BRACE_TOKEN"]
+        ]
+    },
+    {
+        "left": "METHOD_DECLARATION_LIST",
+        "right": [
+            ["METHOD_DECLARATION", "METHOD_DECLARATION_LIST"],
+            ["empty"]
+        ]
+    },
+    {
+        "left": "METHOD_DECLARATION",
+        "right": [
+            ["STATIC_KEYWORD", "PREDEFINED_TYPE", "IDENTIFIER_TOKEN", "PARAMETER_LIST", "BLOCK"],
+            ["PREDEFINED_TYPE", "IDENTIFIER_TOKEN", "PARAMETER_LIST", "BLOCK"]
+        ]
+    },
+    {
+        "left": "PREDEFINED_TYPE",
+        "right": [
+            ["VOID_KEYWORD"],
+            ["INT_KEYWORD"],
+            ["STRING_KEYWORD"]
+        ]
+    },
+    {
+        "left": "PARAMETER_LIST",
+        "right": [
+            ["OPEN_PAREN_TOKEN", "CLOSE_PAREN_TOKEN"],
+            ["OPEN_PAREN_TOKEN", "PARAMETER", "PARAMETER_LIST_REST", "CLOSE_PAREN_TOKEN"]
+        ]
+    },
+    {
+        "left": "PARAMETER_LIST_REST",
+        "right": [
+            ["COMMA_TOKEN", "PARAMETER", "PARAMETER_LIST_REST"],
+            ["empty"]
+        ]
+    },
+    {
+        "left": "BLOCK",
+        "right": [
+            ["OPEN_BRACE_TOKEN", "STATEMENT_LIST", "CLOSE_BRACE_TOKEN"]
+        ]
+    },
+    {
+        "left": "STATEMENT_LIST",
+        "right": [
+            ["STATEMENT", "STATEMENT_LIST"],
+            ["empty"]
+        ]
+    },
+    {
+        "left": "STATEMENT",
+        "right": [
+            ["LOCAL_DECLARATION_STATEMENT"],
+            ["EXPRESSION_STATEMENT"]
+        ]
+    },
+    {
+        "left": "LOCAL_DECLARATION_STATEMENT",
+        "right": [
+            ["VARIABLE_DECLARATION", "SemicolonToken"]
+        ]
+    },
+    {
+        "left": "VARIABLE_DECLARATION",
+        "right": [
+            ["PREDEFINED_TYPE", "IDENTIFIER_TOKEN", "EQUALS_VALUE_CLAUSE"],
+            ["PREDEFINED_TYPE", "IDENTIFIER_TOKEN"]
+        ]
+    },
+    {
+        "left": "EQUALS_VALUE_CLAUSE",
+        "right": [
+            ["EQUALS_TOKEN", "EXPRESSION"],
+            ["empty"]
+        ]
+    },
+    {
+        "left": "EXPRESSION",
+        "right": [
+            ["LITERAL_EXPRESSION"],
+            ["INVOCATION_EXPRESSION"],
+            ["SIMPLE_MEMBER_ACCESS_EXPRESSION"],
+            ["PARENTHESIZED_EXPRESSION"]
+        ]
+    },
+    {
+        "left": "INVOCATION_EXPRESSION",
+        "right": [
+            ["SIMPLE_MEMBER_ACCESS_EXPRESSION", "ARGUMENT_LIST"]
+        ]
+    },
+    {
+        "left": "SIMPLE_MEMBER_ACCESS_EXPRESSION",
+        "right": [
+            ["IdentifierToken", "DOT_TOKEN", "IdentifierToken"]
+        ]
+    },
+    {
+        "left": "ARGUMENT_LIST",
+        "right": [
+            ["OPEN_PAREN_TOKEN", "ARGUMENT", "ARGUMENT_LIST_REST", "CLOSE_PAREN_TOKEN"]
+        ]
+    },
+    {
+        "left": "ARGUMENT_LIST_REST",
+        "right": [
+            ["COMMA_TOKEN", "ARGUMENT", "ARGUMENT_LIST_REST"],
+            ["empty"]
+        ]
+    },
+    {
+        "left": "ARGUMENT",
+        "right": [
+            ["LITERAL_EXPRESSION"],
+            ["IdentifierToken"]
+        ]
+    },
+    {
+        "left": "LITERAL_EXPRESSION",
+        "right": [
+            ["STRING_LITERAL_TOKEN"],
+            ["INTEGER_LITERAL_TOKEN"]
+        ]
+    },
+    {
+        "left": "EXPRESSION_STATEMENT",
+        "right": [
+            ["EXPRESSION", "SemicolonToken"]
+        ]
+    },
+    {
+        "left": "SemicolonToken",
+        "right": [
+            [";"]
+        ]
+    }
+]
