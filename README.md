@@ -13,6 +13,7 @@ src/
 │   ├── Lexer/
 │   │   ├── Lexer.cs               # Implementation of Lexer
 │   │   ├── StandardLexer.cs       # Standard implementation with Roslyn API
+│   │   ├── Keywords.cs            # Keywords definition
 │   │   └── Token.cs               # Token definition
 │   ├── Parser/
 │   │   ├── Parser.cs              # Implementation of Parser
@@ -29,7 +30,7 @@ README.md                          # This file
 
 ## Features (In Progress)
 
-- [ ] Lexical Analysis: Convert source code into token stream
+- [x] Lexical Analysis: Convert source code into token stream
 - [ ] Syntax Analysis: Build Abstract Syntax Tree (AST)
 - [ ] Semantic Analysis: Type checking and symbol resolution
 - [ ] Code Generation: Generate IL code
