@@ -9,7 +9,8 @@ public class Parser : IParser
     public SyntaxTree Parse(IEnumerable<Token> tokens)
     {
         // TODO: Implement the parser
-        throw new NotImplementedException();
+        var standardParser = new StandardParser();
+        return standardParser.Parse(tokens);
     }
 
     public SyntaxTree Parse(string sourceCode)
