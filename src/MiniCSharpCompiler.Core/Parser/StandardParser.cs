@@ -1,3 +1,4 @@
+using System.Text;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using MiniCSharpCompiler.Core.Interfaces;
@@ -10,12 +11,22 @@ public class StandardParser : IParser
     public SyntaxTree Parse(IEnumerable<Token> tokens)
     {
         // 将 Token 转换为源代码字符串
-        var sourceCode = string.Join(
-            Environment.NewLine,
-            tokens.Select(token => token.Value)
-        );
+        StringBuilder sourceCode = new();
 
-        return Parse(sourceCode);
+        foreach (var token in tokens)
+        {
+            foreach (var trivia in token.LeadingTrivia)
+            {
+                sourceCode.Append(trivia.ToString());
+            }
+            sourceCode.Append(token.Value);
+            foreach (var trivia in token.TrailingTrivia)
+            {
+                sourceCode.Append(trivia.ToString());
+            }
+        }
+
+        return Parse(sourceCode.ToString());
     }
 
     public SyntaxTree Parse(string sourceCode)
