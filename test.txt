@@ -1,0 +1,30 @@
+using System;
+
+class Program
+{
+    static void Main()
+    {
+        int x = 5;
+        x = "not-an-int"; // 错误：类型不匹配
+        bool flag = !x; // 错误：! 不能用于 int 类型
+        int y = ~flag;  // 错误：~ 不能用于 bool 类型
+        Console.WriteLine(x);
+
+        int i = 0;
+        if (i == 5) 
+        {
+            x = "not-an-int"; // 错误：类型不匹配
+        }
+
+        while (i > 0) 
+        {
+            undefinedVar++; //错误：未定义的变量
+            int x = 5;      //错误，重复定义
+            x = "not-an-int"; // 错误：类型不匹配
+            bool flag = !x; // 错误：重复定义，! 不能用于 int 类型
+            int y = ~flag;  // 错误：重复定义，~ 不能用于 bool 类型
+        }
+              
+    }
+}
+

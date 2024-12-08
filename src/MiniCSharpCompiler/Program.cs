@@ -27,10 +27,9 @@ class Program
         // 语法分析
         var parser = new StandardParser();
         var syntaxTree = parser.Parse(sourceCode);
-        // var parser = new Parser();
-        // var syntaxTree = parser.Parse(sourceCode);
-        SyntaxPrinter.PrintSyntaxTree(syntaxTree, printTrivia: false);
-        Console.WriteLine();
+        
+        // SyntaxPrinter.PrintSyntaxTree(syntaxTree, printTrivia: false);
+        // Console.WriteLine();
 
         // 语义分析
         var semanticAnalyzer = new SemanticAnalyzer();

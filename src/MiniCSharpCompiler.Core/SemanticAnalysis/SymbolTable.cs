@@ -31,9 +31,16 @@ public class SymbolTable
 
     public bool TryResolveSymbol(string name, Symbol? currentScope, out Symbol? symbol)
     {
-        // 作用域查找逻辑
-        return TryResolveInScope(name, currentScope, out symbol)
-            || TryResolveInNamespace(name, out symbol);
+        // // 作用域查找逻辑
+        // return TryResolveInScope(name, currentScope, out symbol)
+        //     || TryResolveInNamespace(name, out symbol);
+
+        // 优先从当前作用域查找
+        if (TryResolveInScope(name, currentScope, out symbol))
+            return true;
+
+        // 其次从全局命名空间查找
+        return TryResolveInNamespace(name, out symbol);
     }
 
     private bool IsSymbolDeclaredInScope(string name, Symbol? scope)
