@@ -26,10 +26,9 @@ class Program
             // 词法分析
             var lexer = new Lexer();
             var tokens = lexer.Tokenize(sourceCode);
-            SyntaxPrinter.PrintTokens(tokens, printTrivia: false);
 
             // 语法分析
-            var parser = new Parser();
+            var parser = new StandardParser();
             var syntaxTree = parser.Parse(lexer, sourceCode);
             SyntaxPrinter.PrintSyntaxTree(syntaxTree, printTrivia: false);
         }
