@@ -21,20 +21,16 @@ class Program
             sourceCode = File.ReadAllTextAsync(args[0]).Result;
         }
 
-        try
-        {
-            // 词法分析
-            var lexer = new Lexer();
-            var tokens = lexer.Tokenize(sourceCode);
+        // 词法分析
+        var lexer = new Lexer();
+        var tokens = lexer.Tokenize(sourceCode);
 
-            // 语法分析
-            var parser = new StandardParser();
-            var syntaxTree = parser.Parse(lexer, sourceCode);
-            SyntaxPrinter.PrintSyntaxTree(syntaxTree, printTrivia: false);
-        }
-        catch (Exception ex)
-        {
-            Console.WriteLine($"编译错误：{ex.Message}");
-        }
+        // 将 Token 转换为 Roslyn 的 SyntaxToken
+        var syntaxTokenList = tokens.Select(token => token.ToSyntaxToken()).ToList();
+
+        // 语法分析
+        var parser = new Parser(syntaxTokenList);
+        var syntaxTree = parser.Parse();
+        SyntaxPrinter.PrintSyntaxTree(syntaxTree, printTrivia: false);
     }
 }

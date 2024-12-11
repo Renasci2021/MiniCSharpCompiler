@@ -6,7 +6,7 @@ using MiniCSharpCompiler.Core.Lexer;
 
 namespace MiniCSharpCompiler.Core.Parser;
 
-public class StandardParser : IParser
+public class StandardParser
 {
     public SyntaxTree Parse(IEnumerable<Token> tokens)
     {
