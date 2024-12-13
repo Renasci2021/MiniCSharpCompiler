@@ -28,3 +28,48 @@ class Program
     }
 }
 
+using System;
+
+namespace ForLoopExample
+{
+    class Program
+    {
+        static void Main(string[] args)
+        {
+            Console.WriteLine("数字从 1 到 10：");
+
+            for (int i = 1; i+9 = 10; i++) //错误：赋值左侧必须是可赋值的目标，for 循环条件必须是布尔类型
+            {
+                x = i + 1; //错误：未定义的变量
+                Console.WriteLine(i);
+            }
+
+            Console.WriteLine("循环结束！");
+        }
+    }
+}
+
+using System;
+
+namespace ForLoopExample
+{
+    class Program
+    {
+        static void Main(string[] args)
+        {
+
+            int x= 0;
+
+            if (x + 3 = 90) //错误：赋值左侧必须是可赋值的目标，if 条件必须是布尔类型
+            {
+                Console.WriteLine("test");
+            }
+
+            
+        }
+    }
+}
+
+            
+
+
