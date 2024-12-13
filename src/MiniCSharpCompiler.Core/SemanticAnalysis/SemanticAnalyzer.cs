@@ -157,7 +157,7 @@ public class SemanticAnalyzer
                     AnalyzeExpression(expressionStmt.Expression);
                     break;
 
-                //TODO: Uncomment this block
+                //TODO: 
                 // case ReturnStatementSyntax returnStmt:
                 //     Console.WriteLine("分析返回语句：");
                 //     AnalyzeExpression(returnStmt.Expression);
@@ -165,7 +165,7 @@ public class SemanticAnalyzer
 
                 case ForStatementSyntax forStmt:
                     Console.WriteLine("分析 for 循环：");
-                    // AnalyzeForStatement(forStmt);
+                    AnalyzeForStatement(forStmt);
                     break;
 
                 case WhileStatementSyntax whileStmt:
@@ -191,6 +191,10 @@ public class SemanticAnalyzer
                 GetTypeKind(localDecl.Declaration.Type),
                 _currentScope
             );
+
+            Console.WriteLine("分析变量：");
+            Console.WriteLine(variable);
+            Console.WriteLine(symbol);
 
             if (!_symbolTable.TryAddSymbol(symbol))
             {
@@ -239,15 +243,24 @@ public class SemanticAnalyzer
             case AssignmentExpressionSyntax assignment:
                 Console.WriteLine("分析赋值表达式：");
                 // 检查赋值左右两边类型是否匹配
-                AnalyzeExpression(assignment.Left);
-                AnalyzeExpression(assignment.Right);
                 var leftType = GetExpressionType(assignment.Left);
                 var rightType = GetExpressionType(assignment.Right);
 
-                if (leftType != rightType)
+                if (!IsAssignableExpression(assignment.Left))
+                {
+                    ReportError("赋值左侧必须是可赋值的目标", assignment.Left.GetLocation());
+                }
+
+                if (leftType != rightType && rightType != SyntaxKind.None && leftType != SyntaxKind.None)
+                
                 {
                     ReportError($"类型不匹配：'{leftType}' 和 '{rightType}'", assignment.GetLocation());
                 }
+                if (assignment.Right is AssignmentExpressionSyntax nestedAssignment)
+                {
+                    ReportError("赋值表达式右侧不应包含嵌套赋值", nestedAssignment.GetLocation());
+                }
+
                 break;
             case BinaryExpressionSyntax binaryExpr:
                 Console.WriteLine("分析二元表达式：");
@@ -267,17 +280,38 @@ public class SemanticAnalyzer
         }
     }
 
+    private bool IsAssignableExpression(ExpressionSyntax expression)
+{
+    return expression switch
+    {
+        IdentifierNameSyntax => true, // 变量名
+        MemberAccessExpressionSyntax => true, // 成员访问
+        ElementAccessExpressionSyntax => true, // 数组访问
+        // PointerIndirectionExpressionSyntax => true, // 指针解引用
+        TupleExpressionSyntax => true, // 元组表达式
+        ThisExpressionSyntax => true, // this 在某些上下文中可赋值
+        _ => false
+    };
+}
+
+
 
     private SyntaxKind GetExpressionType(ExpressionSyntax expression)
     {
         Console.WriteLine("分析表达式类型：");
         Console.WriteLine(expression);
+        Console.WriteLine(expression.GetType());
         switch (expression)
         {
             case IdentifierNameSyntax identifier:
                 if (_symbolTable.TryResolveSymbol(identifier.Identifier.Text, _currentScope, out var symbol))
                 {
                     return symbol?.Type ?? SyntaxKind.None;
+                }
+                else
+                {
+                    ReportError($"未定义的变量 '{identifier.Identifier.Text}'", identifier.GetLocation());
+                    
                 }
                 break;
 
@@ -303,6 +337,16 @@ public class SemanticAnalyzer
                 Console.WriteLine(binaryExpr);
 
                 return AnalyzeBinaryExpression(binaryExpr);
+
+            case AssignmentExpressionSyntax assignment:
+                Console.WriteLine("分析赋值表达式：");
+                // 检查赋值左右两边类型是否匹配
+                AnalyzeExpression(assignment);
+                return GetExpressionType(assignment.Right);
+            
+            case ParenthesizedExpressionSyntax parenthesized:
+                // 递归分析括号内的表达式
+                return GetExpressionType(parenthesized.Expression);
 
         }
 
@@ -428,7 +472,8 @@ public class SemanticAnalyzer
         // 分析条件表达式
         if (whileStmt.Condition != null)
         {
-            AnalyzeExpression(whileStmt.Condition);
+            // AnalyzeExpression(whileStmt.Condition);
+            // 在GetExpressionType中已经分析了whileStmt.Condition
             var conditionType = GetExpressionType(whileStmt.Condition);
             Console.WriteLine("以下是 while 循环条件：");
             Console.WriteLine(whileStmt.Condition);
@@ -465,7 +510,8 @@ public class SemanticAnalyzer
         // 分析条件表达式
         if (ifStmt.Condition != null)
         {
-            AnalyzeExpression(ifStmt.Condition);
+            // AnalyzeExpression(ifStmt.Condition);
+            // 在GetExpressionType中已经分析了ifStmt.Condition
             var conditionType = GetExpressionType(ifStmt.Condition);
             if (conditionType != SyntaxKind.BoolKeyword)
             {
@@ -483,6 +529,62 @@ public class SemanticAnalyzer
                 ? elseBlock.Statements
                 : SyntaxFactory.List(new[] { ifStmt.Else.Statement }));
         }
+    }
+
+    private void AnalyzeForStatement(ForStatementSyntax forStmt)
+    {
+        // 分析初始化表达式
+        if (forStmt.Declaration != null)
+        {
+            Console.WriteLine("分析For Declaration：");
+            Console.WriteLine(forStmt.Declaration);
+            AnalyzeLocalDeclaration(SyntaxFactory.LocalDeclarationStatement(forStmt.Declaration));
+        }
+        else if (forStmt.Initializers != null)
+        {
+            Console.WriteLine("分析For Initializers：");
+            foreach (var initializer in forStmt.Initializers)
+            {
+                Console.WriteLine(initializer);
+                if (!(initializer is AssignmentExpressionSyntax || initializer is InvocationExpressionSyntax))
+                {
+                    ReportError("for 循环初始化部分必须是赋值或函数调用", initializer.GetLocation());
+                }
+                AnalyzeExpression(initializer);
+            }
+        }
+
+        // 分析条件表达式
+        if (forStmt.Condition != null)
+        {
+            Console.WriteLine("分析For Condition：");
+            Console.WriteLine(forStmt.Condition);
+            // AnalyzeExpression(forStmt.Condition);
+            // 在GetExpressionType中已经分析了forStmt.Condition
+            var conditionType = GetExpressionType(forStmt.Condition);
+            if (conditionType != SyntaxKind.BoolKeyword)
+            {
+                ReportError("for 循环条件必须是布尔类型", forStmt.Condition.GetLocation());
+            }
+        }
+
+        // 分析迭代表达式
+        foreach (var incrementor in forStmt.Incrementors)
+        {
+            Console.WriteLine("分析For Incrementor：");
+            AnalyzeExpression(incrementor);
+        }
+
+        // 分析循环体
+        var statementsInFor = forStmt.Statement is BlockSyntax block
+            ? block.Statements
+            : forStmt.Statement != null
+                ? SyntaxFactory.List(new[] { forStmt.Statement })
+        : default(SyntaxList<StatementSyntax>);
+
+        Console.WriteLine("分析For Statements ：");
+
+        AnalyzeStatements(statementsInFor);
     }
 
 

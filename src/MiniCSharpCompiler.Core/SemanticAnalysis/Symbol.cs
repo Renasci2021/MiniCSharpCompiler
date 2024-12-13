@@ -36,4 +36,10 @@ public class Symbol
     {
         _children.Add(child);
     }
+
+    public override string ToString()
+    {
+        // 输出符号的完整信息
+        return $"{Kind} {FullName}: {Type}";
+    }
 }
