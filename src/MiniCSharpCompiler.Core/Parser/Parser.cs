@@ -94,38 +94,181 @@ public class Parser(List<SyntaxToken> tokens)
 
     private MemberDeclarationSyntax ParseMemberDeclaration()
     {
-        //throw new NotImplementedException();
         var modifiers = ParseModifiers();
-        var classDeclaration = ParseClassDeclaration(modifiers);
-        return classDeclaration;
+
+        if (Current.IsKind(SyntaxKind.ClassKeyword))
+        {
+            return ParseClassDeclaration(modifiers);
+        }
+
+        TypeSyntax type = ParseType();
+        var name = MatchToken(SyntaxKind.IdentifierToken);
+        if (Current.IsKind(SyntaxKind.EqualsToken))
+        {
+            return ParseFieldDeclaration(modifiers, type, name);
+        }
+        if (Current.IsKind(SyntaxKind.OpenParenToken))
+        {
+            return ParseMethodDeclaration(modifiers, type, name);
+        }
+
+        throw new NotImplementedException("Only field, method, property are supported");
     }
 
-    private SyntaxTokenList ParseModifiers() // TODO
+    private TypeSyntax ParseType()
+    {
+        var currentKind = Current.Kind();
+        if (SyntaxFacts.IsPredefinedType(currentKind))
+        {
+            var type = SyntaxFactory.PredefinedType(Current);
+            _position++;
+            return type;
+        }
+        if (currentKind == SyntaxKind.IdentifierToken)
+        {
+            return SyntaxFactory.IdentifierName(MatchToken(SyntaxKind.IdentifierToken));
+        }
+        throw new NotImplementedException("Only predefiend type and identifier supported");
+    }
+
+    private SyntaxTokenList ParseModifiers()
     {
         List<SyntaxKind> allowed = [SyntaxKind.PublicKeyword, SyntaxKind.PrivateKeyword, SyntaxKind.StaticKeyword];
 
-        SyntaxTokenList modifiers = new SyntaxTokenList();
+        List<SyntaxToken> modifiers = [];
         while (allowed.Contains(Current.Kind()))
         {
             modifiers.Add(Current);
             _position++;
         }
-        return modifiers;
+        return new SyntaxTokenList(modifiers);
     }
 
-    private MemberDeclarationSyntax ParseClassDeclaration(SyntaxTokenList modifiers) // TODO
+    private ClassDeclarationSyntax ParseClassDeclaration(SyntaxTokenList modifiers) // TODO
     {
         var keyword = MatchToken(SyntaxKind.ClassKeyword);
         var name = MatchToken(SyntaxKind.IdentifierToken);
-        TypeParameterListSyntax typeParamList = null;
-        if (Current.IsKind(SyntaxKind.LessThanToken)) // is a template
+        TypeParameterListSyntax? typeParamList = null;
+
+        // TODO: class templates
+        if (Current.IsKind(SyntaxKind.LessThanToken))
         {
-            ;
+            throw new NotImplementedException("Class template");
+            //var lessThan = MatchToken(SyntaxKind.LessThanToken);
+            //var param = SyntaxFactory.TypeParameter(MatchToken(SyntaxKind.IdentifierToken));
+            //SeparatedSyntaxList<TypeParameterSyntax> typeParams = [];
+            //typeParamList = SyntaxFactory.TypeParameterList(lessThan, typeParams, MatchToken(SyntaxKind.GreaterThanToken));
         }
-        var openBrace = MatchToken(SyntaxKind.OpenBraceToken);
-        SyntaxList<MemberDeclarationSyntax> members = [];// parse members
-        var closeBrace = MatchToken(SyntaxKind.CloseBraceToken);
+
+        var lbrace = MatchToken(SyntaxKind.OpenBraceToken);
+        List<MemberDeclarationSyntax> members = [];// parse members
+        while (!Current.IsKind(SyntaxKind.CloseBraceToken) && !IsAtEnd)
+        {
+            members.Add(ParseMemberDeclaration());
+        }
+        var rbrace = MatchToken(SyntaxKind.CloseBraceToken);
         var semicolon = MatchToken(SyntaxKind.SemicolonToken);
-        return SyntaxFactory.ClassDeclaration(default, modifiers, keyword, name, typeParamList, null, default, openBrace, members, closeBrace, semicolon);
+        return SyntaxFactory.ClassDeclaration(
+            attributeLists: default,
+            modifiers: modifiers,
+            keyword: keyword,
+            identifier: name,
+            typeParameterList: typeParamList,
+            baseList: null,
+            constraintClauses: default,
+            openBraceToken: lbrace,
+            members: new SyntaxList<MemberDeclarationSyntax>(members),
+            closeBraceToken: rbrace,
+            semicolonToken: semicolon);
+    }
+
+    private FieldDeclarationSyntax ParseFieldDeclaration(SyntaxTokenList modifiers, TypeSyntax type, SyntaxToken name)
+    {
+        var equals = MatchToken(SyntaxKind.EqualsToken);
+        SeparatedSyntaxList<VariableDeclaratorSyntax> decls = [];
+        while (!Current.IsKind(SyntaxKind.SemicolonToken))
+        {
+            var expression = ParseExpression();
+            var declarator = SyntaxFactory.VariableDeclarator(
+                name, null,
+                SyntaxFactory.EqualsValueClause(equals, expression)
+                );
+            decls.Add(declarator);
+        }
+        var declaration = SyntaxFactory.VariableDeclaration(type, decls);
+        return SyntaxFactory.FieldDeclaration(default, modifiers, declaration, MatchToken(SyntaxKind.SemicolonToken));
+    }
+
+    private MethodDeclarationSyntax ParseMethodDeclaration(SyntaxTokenList modifiers, TypeSyntax type, SyntaxToken name)
+    {
+        var paramList = ParseParameterList();
+        var body = ParseBlock();
+        return SyntaxFactory.MethodDeclaration(
+            attributeLists: default,
+            modifiers: modifiers,
+            returnType: type,
+            explicitInterfaceSpecifier: null,
+            identifier: name,
+            typeParameterList: null,
+            parameterList: paramList,
+            constraintClauses: default,
+            body: body,
+            semicolonToken: MatchToken(SyntaxKind.SemicolonToken));
+    }
+
+    private ParameterListSyntax ParseParameterList()
+    {
+        var lparen = MatchToken(SyntaxKind.OpenParenToken);
+        List<ParameterSyntax> parameters = [];
+        List<SyntaxToken> commas = [];
+        
+        var type = ParseType();
+        var name = MatchToken(SyntaxKind.IdentifierToken);
+        parameters.Add(SyntaxFactory.Parameter(
+            attributeLists: default,
+            modifiers: default,
+            type: type,
+            identifier: name,
+            @default: null));
+        while (Current.IsKind(SyntaxKind.CommaToken))
+        {
+            commas.Add(MatchToken(SyntaxKind.CommaToken));
+            type = ParseType();
+            name = MatchToken(SyntaxKind.IdentifierToken);
+            parameters.Add(SyntaxFactory.Parameter(
+                attributeLists: default,
+                modifiers: default,
+                type: type,
+                identifier: name,
+                @default: null));
+        }
+        return SyntaxFactory.ParameterList(
+            lparen, 
+            (new SeparatedSyntaxList<ParameterSyntax>()).AddRange(parameters), 
+            MatchToken(SyntaxKind.CloseParenToken));
+    }
+
+    private BlockSyntax ParseBlock()
+    {
+        var lparen = MatchToken(SyntaxKind.OpenBraceToken);
+        List<StatementSyntax> statements = [];
+        while (!Current.IsKind(SyntaxKind.CloseBraceToken) && !IsAtEnd)
+        {
+            statements.Add(ParseStatement());
+        }
+        return SyntaxFactory.Block(
+            lparen,
+            new SyntaxList<StatementSyntax>(statements),
+            MatchToken(SyntaxKind.CloseBraceToken));
+    }
+
+    private StatementSyntax ParseStatement()
+    {
+        throw new NotImplementedException();
+    }
+
+    private ExpressionSyntax ParseExpression()
+    {
+        throw new NotImplementedException();
     }
 }

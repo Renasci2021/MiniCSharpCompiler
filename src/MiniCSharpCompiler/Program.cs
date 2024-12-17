@@ -1,4 +1,5 @@
-﻿using MiniCSharpCompiler.Core.Lexer;
+﻿using Microsoft.CodeAnalysis;
+using MiniCSharpCompiler.Core.Lexer;
 using MiniCSharpCompiler.Core.Parser;
 using MiniCSharpCompiler.Utilities;
 
@@ -29,8 +30,9 @@ class Program
         var syntaxTokenList = tokens.Select(token => token.ToSyntaxToken()).ToList();
 
         // 语法分析
-        var parser = new Parser(syntaxTokenList);
-        var syntaxTree = parser.Parse();
+        //var parser = new Parser(syntaxTokenList);
+        var stdParser = new StandardParser();
+        var syntaxTree = stdParser.Parse(sourceCode);
         SyntaxPrinter.PrintSyntaxTree(syntaxTree, printTrivia: false);
     }
 }
