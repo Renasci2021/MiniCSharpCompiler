@@ -9,8 +9,20 @@ public class Parser(List<SyntaxToken> tokens)
     private readonly List<SyntaxToken> _tokens = tokens;
     private int _position = 0;
 
-    private bool IsAtEnd => _position == _tokens.Count;
+    private bool IsAtEnd => Current.IsKind(SyntaxKind.EndOfFileToken); // _position == _tokens.Count;
     private SyntaxToken Current => _tokens[_position];
+
+    private SyntaxToken MatchToken(SyntaxKind kind)
+    {
+        if (Current.IsKind(kind))
+        {
+            var token = Current;
+            _position++;
+            return token;
+        }
+
+        throw new Exception($"Expected token of kind {kind}, but got {Current.Text}.");
+    }
 
     public SyntaxTree Parse()
     {
@@ -41,8 +53,7 @@ public class Parser(List<SyntaxToken> tokens)
     private UsingDirectiveSyntax ParseUsingDirective()
     {
         var usingKeyword = MatchToken(SyntaxKind.UsingKeyword);
-        // var name = ParseQualifiedName();
-        var name = ParseSimpleName();
+        var name = ParseQualifiedName();
         var semicolon = MatchToken(SyntaxKind.SemicolonToken);
 
         return SyntaxFactory.UsingDirective(name)
@@ -50,11 +61,10 @@ public class Parser(List<SyntaxToken> tokens)
             .WithSemicolonToken(semicolon);
     }
 
-    private MemberDeclarationSyntax ParseMemberDeclaration()
-    {
-        throw new NotImplementedException();
-    }
-
+    /// <summary>
+    /// 并不严格返回QualifiedName。
+    /// 若无DotToken，则返回一个IdentifierName。
+    /// </summary>
     private NameSyntax ParseQualifiedName()
     {
         var left = ParseSimpleName();
@@ -63,11 +73,14 @@ public class Parser(List<SyntaxToken> tokens)
             return left;
         }
 
-        QualifiedNameSyntax result = null!;
+        MatchToken(SyntaxKind.DotToken);
+        IdentifierNameSyntax right = ParseSimpleName();
+        QualifiedNameSyntax result = SyntaxFactory.QualifiedName(left, right);
         while (Current.IsKind(SyntaxKind.DotToken))
         {
-            var right = ParseSimpleName();
-            result = SyntaxFactory.QualifiedName(left, right);
+            MatchToken(SyntaxKind.DotToken); // 赵培源修改
+            right = ParseSimpleName();
+            result = SyntaxFactory.QualifiedName(result, right);
         }
 
         return result;
@@ -79,15 +92,40 @@ public class Parser(List<SyntaxToken> tokens)
         return SyntaxFactory.IdentifierName(identifier.Text);
     }
 
-    private SyntaxToken MatchToken(SyntaxKind kind)
+    private MemberDeclarationSyntax ParseMemberDeclaration()
     {
-        if (Current.IsKind(kind))
-        {
-            var token = Current;
-            _position++;
-            return token;
-        }
+        //throw new NotImplementedException();
+        var modifiers = ParseModifiers();
+        var classDeclaration = ParseClassDeclaration(modifiers);
+        return classDeclaration;
+    }
 
-        throw new Exception($"Expected token of kind {kind}, but got {Current.Text}.");
+    private SyntaxTokenList ParseModifiers() // TODO
+    {
+        List<SyntaxKind> allowed = [SyntaxKind.PublicKeyword, SyntaxKind.PrivateKeyword, SyntaxKind.StaticKeyword];
+
+        SyntaxTokenList modifiers = new SyntaxTokenList();
+        while (allowed.Contains(Current.Kind()))
+        {
+            modifiers.Add(Current);
+            _position++;
+        }
+        return modifiers;
+    }
+
+    private MemberDeclarationSyntax ParseClassDeclaration(SyntaxTokenList modifiers) // TODO
+    {
+        var keyword = MatchToken(SyntaxKind.ClassKeyword);
+        var name = MatchToken(SyntaxKind.IdentifierToken);
+        TypeParameterListSyntax typeParamList = null;
+        if (Current.IsKind(SyntaxKind.LessThanToken)) // is a template
+        {
+            ;
+        }
+        var openBrace = MatchToken(SyntaxKind.OpenBraceToken);
+        SyntaxList<MemberDeclarationSyntax> members = [];// parse members
+        var closeBrace = MatchToken(SyntaxKind.CloseBraceToken);
+        var semicolon = MatchToken(SyntaxKind.SemicolonToken);
+        return SyntaxFactory.ClassDeclaration(default, modifiers, keyword, name, typeParamList, null, default, openBrace, members, closeBrace, semicolon);
     }
 }
