@@ -283,9 +283,9 @@ public class Parser(List<SyntaxToken> tokens)
             attributeLists: default,
             modifiers: modifiers,
             returnType: type,
-            explicitInterfaceSpecifier: null,
+            explicitInterfaceSpecifier: default,
             identifier: name,
-            typeParameterList: null,
+            typeParameterList: default,
             parameterList: paramList,
             constraintClauses: default,
             body: body,
@@ -295,7 +295,7 @@ public class Parser(List<SyntaxToken> tokens)
     private ParameterListSyntax ParseParameterList()
     {
         var lparen = MatchToken(SyntaxKind.OpenParenToken);
-        List<ParameterSyntax> parameters = [];
+        SyntaxList<ParameterSyntax> parameters = [];
         List<SyntaxToken> commas = [];
         
         var type = ParseType();
@@ -323,6 +323,28 @@ public class Parser(List<SyntaxToken> tokens)
             lparen, 
             (new SeparatedSyntaxList<ParameterSyntax>()).AddRange(parameters), 
             MatchToken(SyntaxKind.CloseParenToken));
+    }
+    private ArgumentListSyntax ParseArgumentList()
+    {
+
+        var lparen = MatchToken(SyntaxKind.OpenParenToken);
+        SyntaxList<ArgumentSyntax> args = [];
+
+        var arg = ParseExpression();
+        args.Add(SyntaxFactory.Argument(arg));
+        while (Current.IsKind(SyntaxKind.CommaToken))
+        {
+            MatchToken(SyntaxKind.CommaToken);
+            arg = ParseExpression();
+            args.Add(SyntaxFactory.Argument(arg));
+        }
+
+        var rparen = MatchToken(SyntaxKind.CloseParenToken);
+
+        return SyntaxFactory.ArgumentList(
+            lparen, 
+            (new SeparatedSyntaxList<ArgumentSyntax>()).AddRange(args), 
+            rparen);
     }
 
     private BlockSyntax ParseBlock()
@@ -396,15 +418,80 @@ public class Parser(List<SyntaxToken> tokens)
         var currentKind = Current.Kind();
         if (SyntaxFacts.IsPredefinedType(currentKind))
         {
-            var type = SyntaxFactory.PredefinedType(Current);
-            _position++;
-            return type;
+            return SyntaxFactory.PredefinedType(MatchToken(currentKind));
         }
+
+        if (PeekTokenKind(1) is SyntaxKind.LessThanToken)
+        {
+            return ParseGenericName();
+        }
+        
+        if (PeekTokenKind(1) is SyntaxKind.OpenBracketToken)
+        {
+            return ParseArrayType();
+        }
+        
         if (currentKind == SyntaxKind.IdentifierToken)
         {
             return SyntaxFactory.IdentifierName(MatchToken(SyntaxKind.IdentifierToken));
         }
+        
         throw new NotImplementedException("Only predefiend type and identifier supported");
+    }
+
+    /// <summary>
+    /// 目前只支持变量作为数组规模。
+    /// </summary>
+    /// <returns></returns>
+    /// <exception cref="NotImplementedException"></exception>
+    private ArrayTypeSyntax ParseArrayType()
+    {
+        TypeSyntax elemType;
+        var currentKind = Current.Kind();
+        if (SyntaxFacts.IsPredefinedType(currentKind))
+            elemType = SyntaxFactory.PredefinedType(MatchToken(currentKind));
+        else if (PeekTokenKind(1) is SyntaxKind.LessThanToken)
+            elemType = ParseGenericName();
+        else if (currentKind == SyntaxKind.IdentifierToken)
+            elemType = SyntaxFactory.IdentifierName(MatchToken(SyntaxKind.IdentifierToken));
+        else throw new NotImplementedException("Unable to handle element type.");
+
+        SyntaxList<ArrayRankSpecifierSyntax> dims = [];
+        while (Current.IsKind(SyntaxKind.OpenBracketToken))
+        {
+            var lbrack = MatchToken(SyntaxKind.OpenBracketToken);
+            var size = ParseIdentifierName(); // 注意
+            var rbrack = MatchToken(SyntaxKind.CloseBracketToken);
+
+            dims.Add(SyntaxFactory.ArrayRankSpecifier(
+                lbrack,
+                (new SeparatedSyntaxList<ExpressionSyntax>()).Add(size),
+                rbrack));
+        }
+        return SyntaxFactory.ArrayType(elemType, dims);
+    }
+
+    private GenericNameSyntax ParseGenericName()
+    {
+        var name = MatchToken(SyntaxKind.IdentifierToken);
+
+        var langle = MatchToken(SyntaxKind.LessThanToken);
+        SyntaxList<TypeSyntax> types = [];
+        types.Add(ParseType());
+        while (!Current.IsKind(SyntaxKind.GreaterThanToken))
+        {
+            MatchToken(SyntaxKind.CommaToken);
+            var t = ParseType();
+            types.Add(t);
+        }
+        var rangle = MatchToken(SyntaxKind.GreaterThanToken);
+        
+        return SyntaxFactory.GenericName(
+            name, 
+            SyntaxFactory.TypeArgumentList(
+                langle,
+                (new SeparatedSyntaxList<TypeSyntax>()).AddRange(types),
+                rangle));
     }
 
     /* ************************************************************ */
@@ -538,7 +625,7 @@ public class Parser(List<SyntaxToken> tokens)
         return SyntaxFactory.IdentifierName(identifier);
     }
 
-    private StatementSyntax ParseWhileStatement()
+    private WhileStatementSyntax ParseWhileStatement()
     {
         var keyword = MatchToken(SyntaxKind.WhileKeyword);
         var lparen = MatchToken(SyntaxKind.OpenParenToken);
@@ -659,9 +746,11 @@ public class Parser(List<SyntaxToken> tokens)
             lhs = ParseElementAccessExpression();
         }
 
+        var eq = MatchToken(SyntaxKind.EqualsToken);
+        rhs = ParseExpression();
         return SyntaxFactory.AssignmentExpression(
             SyntaxKind.SimpleAssignmentExpression, 
-            lhs, MatchToken(SyntaxKind.EqualsToken), ParseExpression());
+            lhs, eq, rhs);
     }
 
     private PostfixUnaryExpressionSyntax ParsePostDecrementExpression()
@@ -719,10 +808,11 @@ public class Parser(List<SyntaxToken> tokens)
 
         stack.Push(ParseAtomExpression());
         while (!Current.IsKind(SyntaxKind.SemicolonToken)
-            && !Current.IsKind(SyntaxKind.CloseParenToken))
+            && !Current.IsKind(SyntaxKind.CloseParenToken)
+            && !Current.IsKind(SyntaxKind.CloseBraceToken))
         {
             var opKind = Current.Kind();
-            while (GetPrecedence(ops.Peek().Kind()) > GetPrecedence(opKind)
+            while (GetPrecedence(ops.Peek().Kind()) > GetPrecedence(opKind))
             {
                 var rhs = stack.Pop();
                 var op = ops.Pop();
@@ -742,7 +832,7 @@ public class Parser(List<SyntaxToken> tokens)
         return stack.Pop();
     }
 
-    private static Dictionary<SyntaxKind, SyntaxKind> op2expr = new Dictionary<SyntaxKind, SyntaxKind>()
+    private static readonly Dictionary<SyntaxKind, SyntaxKind> op2expr = new Dictionary<SyntaxKind, SyntaxKind>()
     {
         [SyntaxKind.BarBarToken] = SyntaxKind.LogicalOrExpression,
         [SyntaxKind.AmpersandAmpersandToken] = SyntaxKind.LogicalAndExpression,
@@ -757,7 +847,7 @@ public class Parser(List<SyntaxToken> tokens)
         [SyntaxKind.AsteriskToken] = SyntaxKind.MultiplyExpression,
         [SyntaxKind.SlashToken] = SyntaxKind.DivideExpression,
     };
-    private BinaryExpressionSyntax MergeInfixExpression(ExpressionSyntax lhs, SyntaxToken op, ExpressionSyntax rhs)
+    private static BinaryExpressionSyntax MergeInfixExpression(ExpressionSyntax lhs, SyntaxToken op, ExpressionSyntax rhs)
     {
         SyntaxKind exprKind = op2expr[op.Kind()];
         return SyntaxFactory.BinaryExpression(exprKind, lhs, op, rhs);        
@@ -765,8 +855,82 @@ public class Parser(List<SyntaxToken> tokens)
 
     /* ************************************************************ */
 
+    /// <summary>
+    /// 不知道结合律具体如何。
+    /// </summary>
+    /// <returns></returns>
     private ExpressionSyntax ParseAtomExpression()
     {
-        throw new NotImplementedException();
+        // 先解决所有的字面值等简单情形
+        var kind = Current.Kind();
+        switch (kind)
+        {
+            case SyntaxKind.TrueKeyword:
+            case SyntaxKind.FalseKeyword:
+            case SyntaxKind.NullKeyword:
+            case SyntaxKind.NumericLiteralToken:
+            case SyntaxKind.StringLiteralToken:
+            case SyntaxKind.CharacterLiteralToken:
+                return SyntaxFactory.LiteralExpression(kind, MatchToken(kind));
+
+            case SyntaxKind.InterpolatedStringStartToken:
+                return ParseInterpolatedStringExpression();
+
+            case SyntaxKind.OpenParenToken:
+                var lparen = MatchToken(SyntaxKind.OpenParenToken);
+                var expr = ParseExpression();
+                var rparen = MatchToken(SyntaxKind.CloseParenToken);
+                return SyntaxFactory.ParenthesizedExpression(lparen, expr, rparen);
+
+            case SyntaxKind.NewKeyword:
+                return ParseCreationExpression();
+
+            default:
+                break;
+        }
+
+        throw new NotImplementedException("Atom expression");
     }
+
+    private InterpolatedStringExpressionSyntax ParseInterpolatedStringExpression()
+    {
+        var start = MatchToken(SyntaxKind.InterpolatedStringStartToken);
+        SyntaxList<InterpolatedStringContentSyntax> list = [];
+        while (!Current.IsKind(SyntaxKind.InterpolatedStringEndToken))
+        {
+            if (Current.IsKind(SyntaxKind.OpenBraceToken))
+            {
+                var lbrace = MatchToken(SyntaxKind.OpenBraceToken);
+                var val = ParseExpression();
+                var rbrace = MatchToken(SyntaxKind.CloseBraceToken);
+                list.Add(SyntaxFactory.Interpolation(lbrace, val, null, null, rbrace));
+            }
+            else if (Current.IsKind(SyntaxKind.InterpolatedStringTextToken))
+            {
+                list.Add(SyntaxFactory.InterpolatedStringText(MatchToken(SyntaxKind.InterpolatedStringTextToken)));
+            }
+            else
+            {
+                throw new Exception($"{Current} not allowed within interp-str.");
+            }
+        }
+        var end = MatchToken(SyntaxKind.InterpolatedStringEndToken);
+        return SyntaxFactory.InterpolatedStringExpression(start, list, end);
+    }
+
+    private ExpressionSyntax ParseCreationExpression()
+    {
+        var keyword = MatchToken(SyntaxKind.NewKeyword);
+        var type = ParseType();
+        if (type.IsKind(SyntaxKind.ArrayType))
+        {
+            return SyntaxFactory.ArrayCreationExpression(keyword, type, null);
+        }
+        else
+        {
+            var argList = ParseArgumentList();
+            return SyntaxFactory.ObjectCreationExpression(keyword, type, argList, null);
+        }
+    }
+
 }
