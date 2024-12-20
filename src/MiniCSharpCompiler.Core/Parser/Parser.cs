@@ -126,7 +126,7 @@ public class Parser(List<SyntaxToken> tokens)
         {
             while (true)
             {
-                switch (PeekTokenKind(k))
+                switch (PeekTokenKind(k++))
                 {
                     case SyntaxKind.EqualsToken:
                         return ParseFieldDeclaration();
@@ -246,14 +246,14 @@ public class Parser(List<SyntaxToken> tokens)
     private SeparatedSyntaxList<VariableDeclaratorSyntax> ParseVariableDeclarators()
     {
         SeparatedSyntaxList<VariableDeclaratorSyntax> decls = [];
-        var name = MatchToken(SyntaxKind.IdentifierName);
+        var name = MatchToken(SyntaxKind.IdentifierToken);
         EqualsValueClauseSyntax eqClause = ParseEqualsValueClause();
         var declarator = SyntaxFactory.VariableDeclarator(name, null, eqClause);
         decls = decls.Add(declarator);
         while (!Current.IsKind(SyntaxKind.SemicolonToken))
         {
             MatchToken(SyntaxKind.CommaToken);
-            name = MatchToken(SyntaxKind.IdentifierName);
+            name = MatchToken(SyntaxKind.IdentifierToken);
             eqClause = ParseEqualsValueClause();
             declarator = SyntaxFactory.VariableDeclarator(name, null, eqClause);
             decls = decls.Add(declarator);
@@ -275,7 +275,7 @@ public class Parser(List<SyntaxToken> tokens)
     {
         var modifiers = ParseModifiers([SyntaxKind.PublicKeyword, SyntaxKind.PrivateKeyword, SyntaxKind.StaticKeyword]);
         var type = ParseType();
-        var name = MatchToken(SyntaxKind.IdentifierName);
+        var name = MatchToken(SyntaxKind.IdentifierToken);
         var paramList = ParseParameterList();
         var body = ParseBlock();
 
@@ -519,7 +519,7 @@ public class Parser(List<SyntaxToken> tokens)
             }
 
             sections.Add(SyntaxFactory.SwitchSection(
-                (new SyntaxList<SwitchLabelSyntax>()).AddRange(sections),
+                (new SyntaxList<SwitchLabelSyntax>()).AddRange(labels),
                 (new SyntaxList<StatementSyntax>()).AddRange(statements)
                 ));
         }
@@ -620,12 +620,152 @@ public class Parser(List<SyntaxToken> tokens)
 
     private ExpressionSyntax ParseStatementExpression()
     {
-        throw new NotImplementedException();
+        try
+        {
+            for (int i = 1; ; i++)
+            {
+                switch (PeekTokenKind(i))
+                {
+                    case SyntaxKind.PlusPlusToken:
+                        return ParsePostIncrementExpression();
+                    case SyntaxKind.MinusMinusToken:
+                        return ParsePostDecrementExpression();
+                    case SyntaxKind.EqualsToken:
+                        return ParseSimpleAssignmentExpression();
+                    case SyntaxKind.OpenParenToken:
+                        return ParseInvocationExpression();
+                    case SyntaxKind.SemicolonToken:
+                        throw new NotImplementedException("Unsupported statement-expression.");
+                    default:
+                        break;
+                }
+            }
+        }
+        catch (IndexOutOfRangeException)
+        {
+            throw;
+        }
+    }
+
+    private AssignmentExpressionSyntax ParseSimpleAssignmentExpression()
+    {
+        ExpressionSyntax lhs, rhs;
+        if (PeekTokenKind(1) is SyntaxKind.EqualsToken)
+        {
+            lhs = ParseIdentifierName();
+        }
+        else
+        {
+            lhs = ParseElementAccessExpression();
+        }
+
+        return SyntaxFactory.AssignmentExpression(
+            SyntaxKind.SimpleAssignmentExpression, 
+            lhs, MatchToken(SyntaxKind.EqualsToken), ParseExpression());
+    }
+
+    private PostfixUnaryExpressionSyntax ParsePostDecrementExpression()
+    {
+        var operand = ParseIdentifierName();
+        var op = MatchToken(SyntaxKind.MinusMinusToken);
+
+        return SyntaxFactory.PostfixUnaryExpression(SyntaxKind.PostDecrementExpression, operand, op);
+    }
+
+    private PostfixUnaryExpressionSyntax ParsePostIncrementExpression()
+    {
+        var operand = ParseIdentifierName();
+        var op = MatchToken(SyntaxKind.PlusPlusToken);
+        
+        return SyntaxFactory.PostfixUnaryExpression(SyntaxKind.PostIncrementExpression, operand, op );
     }
 
     /* ************************************************************ */
 
+    private static int GetPrecedence(SyntaxKind op)
+    {
+        switch (op)
+        {
+            case SyntaxKind.BarBarToken:
+                return 0;
+            case SyntaxKind.AmpersandAmpersandToken:
+                return 1;
+            case SyntaxKind.EqualsEqualsToken:
+            case SyntaxKind.ExclamationEqualsToken:
+                return 2;
+            case SyntaxKind.LessThanToken:
+            case SyntaxKind.GreaterThanToken:
+            case SyntaxKind.LessThanEqualsToken:
+            case SyntaxKind.GreaterThanEqualsToken:
+                return 3;
+            case SyntaxKind.PlusToken:
+            case SyntaxKind.MinusToken:
+                return 4;
+            case SyntaxKind.AsteriskToken:
+            case SyntaxKind.SlashToken:
+                return 5;
+            default:
+                throw new NotImplementedException("Not supported binary infix operator");
+        }
+    }
+    /// <summary>
+    /// 这些中缀表达式是右结合的，方便归约分析。
+    /// </summary>
+    /// <returns></returns>
     private ExpressionSyntax ParseExpression()
+    {
+        Stack<ExpressionSyntax> stack = [];
+        Stack<SyntaxToken> ops = [];
+
+        stack.Push(ParseAtomExpression());
+        while (!Current.IsKind(SyntaxKind.SemicolonToken)
+            && !Current.IsKind(SyntaxKind.CloseParenToken))
+        {
+            var opKind = Current.Kind();
+            while (GetPrecedence(ops.Peek().Kind()) > GetPrecedence(opKind)
+            {
+                var rhs = stack.Pop();
+                var op = ops.Pop();
+                var lhs = stack.Pop();
+                stack.Push(MergeInfixExpression(lhs, op, rhs));
+            }
+            ops.Push(MatchToken(opKind));
+            stack.Push(ParseAtomExpression());
+        }
+        while (stack.Count > 1)
+        {
+            var rhs = stack.Pop();
+            var op = ops.Pop();
+            var lhs = stack.Pop();
+            stack.Push(MergeInfixExpression(lhs, op, rhs));
+        }
+        return stack.Pop();
+    }
+
+    private static Dictionary<SyntaxKind, SyntaxKind> op2expr = new Dictionary<SyntaxKind, SyntaxKind>()
+    {
+        [SyntaxKind.BarBarToken] = SyntaxKind.LogicalOrExpression,
+        [SyntaxKind.AmpersandAmpersandToken] = SyntaxKind.LogicalAndExpression,
+        [SyntaxKind.EqualsEqualsToken] = SyntaxKind.EqualsExpression,
+        [SyntaxKind.ExclamationEqualsToken] = SyntaxKind.NotEqualsExpression,
+        [SyntaxKind.LessThanToken] = SyntaxKind.LessThanExpression,
+        [SyntaxKind.GreaterThanToken] = SyntaxKind.GreaterThanOrEqualExpression,
+        [SyntaxKind.LessThanEqualsToken] = SyntaxKind.LessThanOrEqualExpression,
+        [SyntaxKind.GreaterThanEqualsToken] = SyntaxKind.GreaterThanOrEqualExpression,
+        [SyntaxKind.PlusToken] = SyntaxKind.AddExpression,
+        [SyntaxKind.MinusToken] = SyntaxKind.SubtractExpression,
+        [SyntaxKind.AsteriskToken] = SyntaxKind.MultiplyExpression,
+        [SyntaxKind.SlashToken] = SyntaxKind.DivideExpression,
+    };
+    private BinaryExpressionSyntax MergeInfixExpression(ExpressionSyntax lhs, SyntaxToken op, ExpressionSyntax rhs)
+    {
+        SyntaxKind exprKind = op2expr[op.Kind()];
+        return SyntaxFactory.BinaryExpression(exprKind, lhs, op, rhs);        
+    }
+
+    /* ************************************************************ */
+
+    private ExpressionSyntax ParseAtomExpression()
     {
         throw new NotImplementedException();
     }
