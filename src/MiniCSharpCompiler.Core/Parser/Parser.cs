@@ -1,6 +1,7 @@
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
+using System.Linq.Expressions;
 
 namespace MiniCSharpCompiler.Core.Parser;
 
@@ -458,13 +459,125 @@ public class Parser(List<SyntaxToken> tokens)
             case SyntaxKind.OpenBraceToken:
                 return ParseBlock();
             default:
-                throw new NotImplementedException($"{Current} for what statement?");
+                return ParseExpressionStatement();
         }
     }
 
+    /// <summary>
+    /// 仅支持变量作为控制变量，还不能用表达式。
+    /// 也许以后可以加上重复标签检查？
+    /// </summary>
+    /// <returns></returns>
+    private SwitchStatementSyntax ParseSwitchStatement()
+    {
+        var keyword = MatchToken(SyntaxKind.SwitchKeyword);
+        var lparen = MatchToken(SyntaxKind.OpenParenToken);
+        var keyval = ParseIdentifierName();
+        var rparen = MatchToken(SyntaxKind.CloseParenToken);
+        var lbrace = MatchToken(SyntaxKind.OpenBraceToken);
+
+        List<SwitchSectionSyntax> sections = [];
+        bool hasDefault = false;
+        while (!Current.IsKind(SyntaxKind.CloseBraceToken))
+        {
+            List<SwitchLabelSyntax> labels = [];
+            while (true)
+            {
+                if (Current.Kind() is SyntaxKind.CaseKeyword)
+                {
+                    labels.Add(SyntaxFactory.CaseSwitchLabel(
+                        MatchToken(SyntaxKind.CaseKeyword),
+                        ParseExpression(),
+                        MatchToken(SyntaxKind.ColonToken)));
+                }
+                else if (Current.Kind() is SyntaxKind.DefaultKeyword)
+                {
+                    if (hasDefault)
+                    {
+                        throw new Exception("Multiple 'default's not allowed.");
+                    }
+                    else
+                    {
+                        hasDefault = true;
+                    }
+                    labels.Add(SyntaxFactory.DefaultSwitchLabel(
+                        MatchToken(SyntaxKind.DefaultKeyword),
+                        MatchToken(SyntaxKind.ColonToken)));
+                }
+                else
+                {
+                    break;
+                }
+            }
+
+            List<StatementSyntax> statements = [];
+            while (!Current.IsKind(SyntaxKind.CloseBraceToken)
+                && !Current.IsKind(SyntaxKind.CaseKeyword)
+                && !Current.IsKind(SyntaxKind.DefaultKeyword))
+            {
+                statements.Add(ParseStatement());
+            }
+
+            sections.Add(SyntaxFactory.SwitchSection(
+                (new SyntaxList<SwitchLabelSyntax>()).AddRange(sections),
+                (new SyntaxList<StatementSyntax>()).AddRange(statements)
+                ));
+        }
+
+        var rbrace = MatchToken(SyntaxKind.CloseBraceToken);
+
+        return SyntaxFactory.SwitchStatement(
+            keyword, lparen, keyval, rparen, lbrace,
+            (new SyntaxList<SwitchSectionSyntax>()).AddRange(sections),
+            rbrace);
+    }
+
+    private IdentifierNameSyntax ParseIdentifierName()
+    {
+        var identifier = MatchToken(SyntaxKind.IdentifierToken);
+        return SyntaxFactory.IdentifierName(identifier);
+    }
+
+    private StatementSyntax ParseWhileStatement()
+    {
+        var keyword = MatchToken(SyntaxKind.WhileKeyword);
+        var lparen = MatchToken(SyntaxKind.OpenParenToken);
+        var cond = ParseExpression();
+        var rparen = MatchToken(SyntaxKind.CloseParenToken);
+        var body = ParseBlock();
+
+        return SyntaxFactory.WhileStatement(keyword, lparen, cond, rparen, body);
+    }
+
+    /// <summary>
+    /// 初始化器必须是变量定义。
+    /// 暂不支持更新部分采用逗号表达式。
+    /// </summary>
+    /// <returns></returns>
+    /// <exception cref="NotImplementedException"></exception>
     private ForStatementSyntax ParseForStatement()
     {
-        throw new NotImplementedException();
+        var keyword = MatchToken(SyntaxKind.ForKeyword);
+        var lparen = MatchToken(SyntaxKind.OpenParenToken);
+
+        var init = ParseVariableDeclaration();
+
+        var sep1 = MatchToken(SyntaxKind.SemicolonToken);
+        var condition = ParseExpression();
+        var sep2 = MatchToken(SyntaxKind.SemicolonToken);
+
+        var updates = new SeparatedSyntaxList<ExpressionSyntax>();
+        updates = updates.Add(ParseStatementExpression());
+
+        var rparen = MatchToken(SyntaxKind.CloseParenToken);
+        var body = ParseBlock();
+
+        return SyntaxFactory.ForStatement(
+            keyword, lparen,
+            init, default, sep1,
+            condition, sep2,
+            updates, rparen,
+            body);
     }
 
     /// <summary>
@@ -499,7 +612,15 @@ public class Parser(List<SyntaxToken> tokens)
     /// <exception cref="NotImplementedException"></exception>
     private ExpressionStatementSyntax ParseExpressionStatement()
     {
-        throw new NotImplementedException("ExpressionStatement");
+        ExpressionSyntax expr = ParseStatementExpression();
+        var end = MatchToken(SyntaxKind.SemicolonToken);
+
+        return SyntaxFactory.ExpressionStatement(expr, end);
+    }
+
+    private ExpressionSyntax ParseStatementExpression()
+    {
+        throw new NotImplementedException();
     }
 
     /* ************************************************************ */
