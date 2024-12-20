@@ -1,0 +1,75 @@
+using System;
+
+class Program
+{
+    static void Main()
+    {
+        int x = 5;
+        x = "not-an-int"; // 错误：类型不匹配
+        bool flag = !x; // 错误：! 不能用于 int 类型
+        int y = ~flag;  // 错误：~ 不能用于 bool 类型
+        Console.WriteLine(x);
+
+        int i = 0;
+        if (i == 5) 
+        {
+            x = "not-an-int"; // 错误：类型不匹配
+        }
+
+        while (i > 0) 
+        {
+            undefinedVar++; //错误：未定义的变量
+            int x = 5;      //错误，重复定义
+            x = "not-an-int"; // 错误：类型不匹配
+            bool flag = !x; // 错误：重复定义，! 不能用于 int 类型
+            int y = ~flag;  // 错误：重复定义，~ 不能用于 bool 类型
+        }
+              
+    }
+}
+
+using System;
+
+namespace ForLoopExample
+{
+    class Program
+    {
+        static void Main(string[] args)
+        {
+            Console.WriteLine("数字从 1 到 10：");
+
+            for (int i = 1; i+9 = 10; i++) //错误：赋值左侧必须是可赋值的目标，for 循环条件必须是布尔类型
+            {
+                x = i + 1; //错误：未定义的变量
+                Console.WriteLine(i);
+            }
+
+            Console.WriteLine("循环结束！");
+        }
+    }
+}
+
+using System;
+
+namespace ForLoopExample
+{
+    class Program
+    {
+        static void Main(string[] args)
+        {
+
+            int x= 0;
+
+            if (x + 3 = 90) //错误：赋值左侧必须是可赋值的目标，if 条件必须是布尔类型
+            {
+                Console.WriteLine("test");
+            }
+
+            
+        }
+    }
+}
+
+            
+
+
