@@ -8,25 +8,25 @@ class Program
         string input = Console.ReadLine();
         int[] numbers = Array.ConvertAll(input.Split(' '), int.Parse);
 
-        InsertionSort(numbers);
+        for (int i = 1; i < numbers.Length; i++)
+        {
+            int key = numbers[i];
+            int j = i - 1;
+
+            while (numbers[j] > key)
+            {
+                numbers[j + 1] = numbers[j];
+                j = j - 1;
+
+                if (j < 0)
+                {
+                    break;
+                }
+            }
+            numbers[j + 1] = key;
+        }
 
         Console.WriteLine("Sorted numbers:");
         Console.WriteLine(string.Join(" ", numbers));
-    }
-
-    static void InsertionSort(int[] array)
-    {
-        for (int i = 1; i < array.Length; i++)
-        {
-            int key = array[i];
-            int j = i - 1;
-
-            while (j >= 0 && array[j] > key)
-            {
-                array[j + 1] = array[j];
-                j--;
-            }
-            array[j + 1] = key;
-        }
     }
 }
