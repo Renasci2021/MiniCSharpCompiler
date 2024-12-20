@@ -24,7 +24,7 @@ class Program
 
         while (left < right)
         {
-            if (char.ToLower(str[left]) != char.ToLower(str[right]))
+            if (str[left] != str[right])
             {
                 return false;
             }

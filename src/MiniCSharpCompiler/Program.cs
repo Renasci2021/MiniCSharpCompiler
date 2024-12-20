@@ -1,6 +1,7 @@
 ﻿using System.Reflection;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
+using MiniCSharpCompiler.Core.Lexer;
 using MiniCSharpCompiler.Core.Parser;
 using MiniCSharpCompiler.Core.SemanticAnalysis;
 using MiniCSharpCompiler.Utilities;
@@ -11,8 +12,8 @@ class Program
 {
     static void Main(string[] args)
     {
+        // 读取源代码
         string sourceCode;
-
         if (args.Length == 0)
         {
             Console.WriteLine("请从标准输入中输入源代码，结束输入请按 Ctrl+D (Unix) 或 Ctrl+Z (Windows)：");
@@ -24,23 +25,26 @@ class Program
             sourceCode = File.ReadAllTextAsync(args[0]).Result;
         }
 
+        // 词法分析
+        var lexer = new Lexer();
+        var tokens = lexer.Tokenize(sourceCode);
+
         // 语法分析
+        // var syntaxTokens = tokens.Select(token => token.ToSyntaxToken()).ToList();
+        // var parser = new Parser(syntaxTokens);
+        // var syntaxTree = parser.Parse();
         var parser = new StandardParser();
-        var syntaxTree = parser.Parse(sourceCode);
-        
-        // SyntaxPrinter.PrintSyntaxTree(syntaxTree, printTrivia: false);
-        // Console.WriteLine();
+        var syntaxTree = parser.Parse(tokens);
+
+        SyntaxPrinter.PrintSyntaxTree(syntaxTree, printTrivia: false);
+        Console.WriteLine();
 
         // 语义分析
         var semanticAnalyzer = new SemanticAnalyzer();
         var diagnostics = semanticAnalyzer.Analyze(syntaxTree.GetCompilationUnitRoot());
 
-        // 输出诊断信息
         Console.WriteLine($"共发现 {diagnostics.Count} 个语义错误：");
-        foreach (var diagnostic in diagnostics)
-        {
-            Console.WriteLine($"{diagnostic.Location}: {diagnostic.Message}");
-        }
+        diagnostics.Select(diagnostic => diagnostic.Message).ToList().ForEach(Console.WriteLine);
         Console.WriteLine();
 
         // 使用 Roslyn 进行编译
