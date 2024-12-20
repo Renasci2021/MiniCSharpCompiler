@@ -24,12 +24,31 @@ public class Parser(List<SyntaxToken> tokens)
         throw new Exception($"Expected token of kind {kind}, but got {Current.Text}.");
     }
 
+    private SyntaxToken PeekToken(int k)
+    {
+        if (_position + k >= _tokens.Count)
+        {
+            throw new IndexOutOfRangeException($"Expect {k} more tokens");
+        }
+        return _tokens[_position + k];
+    }
+
+    private SyntaxKind PeekTokenKind(int k)
+    {
+        if (_position + k >= _tokens.Count)
+        {
+            throw new IndexOutOfRangeException($"Expect {k} more tokens");
+        }
+        return _tokens[_position + k].Kind();
+    }
+
     public SyntaxTree Parse()
     {
         var compilationUnit = ParseCompilationUnit();
         return SyntaxFactory.SyntaxTree(compilationUnit);
     }
 
+    /* ************************************************************ */
     private CompilationUnitSyntax ParseCompilationUnit()
     {
         var usings = new List<UsingDirectiveSyntax>();
@@ -94,80 +113,64 @@ public class Parser(List<SyntaxToken> tokens)
 
     private MemberDeclarationSyntax ParseMemberDeclaration()
     {
-        var modifiers = ParseModifiers();
-
-        if (Current.IsKind(SyntaxKind.ClassKeyword))
+        List<SyntaxKind> modifierKinds = [SyntaxKind.PublicKeyword, SyntaxKind.PrivateKeyword, SyntaxKind.StaticKeyword];
+        int k = 0;
+        while (modifierKinds.Contains(PeekTokenKind(k))) k++;
+        if (PeekTokenKind(k) is SyntaxKind.ClassKeyword)
         {
-            return ParseClassDeclaration(modifiers);
+            return ParseClassDeclaration();
         }
 
-        TypeSyntax type = ParseType();
-        var name = MatchToken(SyntaxKind.IdentifierToken);
-        if (Current.IsKind(SyntaxKind.EqualsToken))
+        try
         {
-            return ParseFieldDeclaration(modifiers, type, name);
+            while (true)
+            {
+                switch (PeekTokenKind(k))
+                {
+                    case SyntaxKind.EqualsToken:
+                        return ParseFieldDeclaration();
+                    case SyntaxKind.OpenParenToken:
+                        return ParseMethodDeclaration();
+                    case SyntaxKind.OpenBraceToken:
+                        return ParsePropertyDeclaration();
+                    default:
+                        continue;
+                }
+            }
         }
-        if (Current.IsKind(SyntaxKind.OpenParenToken))
+        catch (IndexOutOfRangeException)
         {
-            return ParseMethodDeclaration(modifiers, type, name);
+            throw;
         }
 
         throw new NotImplementedException("Only field, method, property are supported");
     }
 
-    private TypeSyntax ParseType()
-    {
-        var currentKind = Current.Kind();
-        if (SyntaxFacts.IsPredefinedType(currentKind))
-        {
-            var type = SyntaxFactory.PredefinedType(Current);
-            _position++;
-            return type;
-        }
-        if (currentKind == SyntaxKind.IdentifierToken)
-        {
-            return SyntaxFactory.IdentifierName(MatchToken(SyntaxKind.IdentifierToken));
-        }
-        throw new NotImplementedException("Only predefiend type and identifier supported");
-    }
+    /* ************************************************************ */
 
-    private SyntaxTokenList ParseModifiers()
+    private ClassDeclarationSyntax ParseClassDeclaration() // TODO
     {
-        List<SyntaxKind> allowed = [SyntaxKind.PublicKeyword, SyntaxKind.PrivateKeyword, SyntaxKind.StaticKeyword];
-
-        List<SyntaxToken> modifiers = [];
-        while (allowed.Contains(Current.Kind()))
-        {
-            modifiers.Add(Current);
-            _position++;
-        }
-        return new SyntaxTokenList(modifiers);
-    }
-
-    private ClassDeclarationSyntax ParseClassDeclaration(SyntaxTokenList modifiers) // TODO
-    {
+        var modifiers = ParseModifiers([SyntaxKind.PublicKeyword]);
         var keyword = MatchToken(SyntaxKind.ClassKeyword);
         var name = MatchToken(SyntaxKind.IdentifierToken);
-        TypeParameterListSyntax? typeParamList = null;
 
-        // TODO: class templates
+        TypeParameterListSyntax? typeParamList = null; // TODO: class templates
         if (Current.IsKind(SyntaxKind.LessThanToken))
         {
-            throw new NotImplementedException("Class template");
-            //var lessThan = MatchToken(SyntaxKind.LessThanToken);
-            //var param = SyntaxFactory.TypeParameter(MatchToken(SyntaxKind.IdentifierToken));
-            //SeparatedSyntaxList<TypeParameterSyntax> typeParams = [];
-            //typeParamList = SyntaxFactory.TypeParameterList(lessThan, typeParams, MatchToken(SyntaxKind.GreaterThanToken));
+            typeParamList = ParseTypeParameterList();
         }
 
         var lbrace = MatchToken(SyntaxKind.OpenBraceToken);
+
         List<MemberDeclarationSyntax> members = [];// parse members
         while (!Current.IsKind(SyntaxKind.CloseBraceToken) && !IsAtEnd)
         {
             members.Add(ParseMemberDeclaration());
         }
+
         var rbrace = MatchToken(SyntaxKind.CloseBraceToken);
         var semicolon = MatchToken(SyntaxKind.SemicolonToken);
+
         return SyntaxFactory.ClassDeclaration(
             attributeLists: default,
             modifiers: modifiers,
@@ -182,27 +185,99 @@ public class Parser(List<SyntaxToken> tokens)
             semicolonToken: semicolon);
     }
 
-    private FieldDeclarationSyntax ParseFieldDeclaration(SyntaxTokenList modifiers, TypeSyntax type, SyntaxToken name)
+    static bool IsModifier(SyntaxKind kind)
     {
-        var equals = MatchToken(SyntaxKind.EqualsToken);
-        SeparatedSyntaxList<VariableDeclaratorSyntax> decls = [];
-        while (!Current.IsKind(SyntaxKind.SemicolonToken))
+        return (
+            kind is SyntaxKind.PublicKeyword
+            || kind is SyntaxKind.PrivateKeyword
+            || kind is SyntaxKind.StaticKeyword
+            );
+    }
+    private SyntaxTokenList ParseModifiers(List<SyntaxKind> allowed)
+    { 
+        List<SyntaxToken> modifiers = [];
+        while (true)
         {
-            var expression = ParseExpression();
-            var declarator = SyntaxFactory.VariableDeclarator(
-                name, null,
-                SyntaxFactory.EqualsValueClause(equals, expression)
-                );
-            decls.Add(declarator);
+            var kind = Current.Kind();
+            if (!IsModifier(kind)) break;
+            if (allowed.Contains(kind))
+            {
+                modifiers.Add(MatchToken(kind));
+            }
         }
-        var declaration = SyntaxFactory.VariableDeclaration(type, decls);
+        return new SyntaxTokenList(modifiers);
+    }
+
+    private TypeParameterListSyntax ParseTypeParameterList()
+    {
+        var langle = MatchToken(SyntaxKind.LessThanToken);
+
+        var param = SyntaxFactory.TypeParameter(MatchToken(SyntaxKind.IdentifierToken));
+        SeparatedSyntaxList<TypeParameterSyntax> typeParams = [param];
+        if (!Current.IsKind(SyntaxKind.GreaterThanToken))
+        {
+            throw new NotImplementedException("Only support one type argument");
+        }
+
+        var rangle = MatchToken(SyntaxKind.GreaterThanToken);
+        
+        return SyntaxFactory.TypeParameterList(langle, typeParams, rangle);
+    }
+
+    /* ************************************************************ */
+
+    private FieldDeclarationSyntax ParseFieldDeclaration()
+    {
+        var modifiers = ParseModifiers([SyntaxKind.PrivateKeyword]);
+        VariableDeclarationSyntax declaration = ParseVariableDeclaration();
+
         return SyntaxFactory.FieldDeclaration(default, modifiers, declaration, MatchToken(SyntaxKind.SemicolonToken));
     }
 
-    private MethodDeclarationSyntax ParseMethodDeclaration(SyntaxTokenList modifiers, TypeSyntax type, SyntaxToken name)
+    private VariableDeclarationSyntax ParseVariableDeclaration()
     {
+        var type = ParseType();
+        SeparatedSyntaxList<VariableDeclaratorSyntax> decls = ParseVariableDeclarators();
+        
+        return SyntaxFactory.VariableDeclaration(type, decls); ;
+    }
+
+    private SeparatedSyntaxList<VariableDeclaratorSyntax> ParseVariableDeclarators()
+    {
+        SeparatedSyntaxList<VariableDeclaratorSyntax> decls = [];
+        var name = MatchToken(SyntaxKind.IdentifierName);
+        EqualsValueClauseSyntax eqClause = ParseEqualsValueClause();
+        var declarator = SyntaxFactory.VariableDeclarator(name, null, eqClause);
+        decls = decls.Add(declarator);
+        while (!Current.IsKind(SyntaxKind.SemicolonToken))
+        {
+            MatchToken(SyntaxKind.CommaToken);
+            name = MatchToken(SyntaxKind.IdentifierName);
+            eqClause = ParseEqualsValueClause();
+            declarator = SyntaxFactory.VariableDeclarator(name, null, eqClause);
+            decls = decls.Add(declarator);
+        }
+
+        return decls;
+    }
+
+    private EqualsValueClauseSyntax ParseEqualsValueClause()
+    {
+        var equals = MatchToken(SyntaxKind.EqualsToken);
+        var expression = ParseExpression();        
+        return SyntaxFactory.EqualsValueClause(equals, expression); ;
+    }
+
+    /* ************************************************************ */
+
+    private MethodDeclarationSyntax ParseMethodDeclaration()
+    {
+        var modifiers = ParseModifiers([SyntaxKind.PublicKeyword, SyntaxKind.PrivateKeyword, SyntaxKind.StaticKeyword]);
+        var type = ParseType();
+        var name = MatchToken(SyntaxKind.IdentifierName);
         var paramList = ParseParameterList();
         var body = ParseBlock();
+
         return SyntaxFactory.MethodDeclaration(
             attributeLists: default,
             modifiers: modifiers,
@@ -242,6 +317,7 @@ public class Parser(List<SyntaxToken> tokens)
                 identifier: name,
                 @default: null));
         }
+
         return SyntaxFactory.ParameterList(
             lparen, 
             (new SeparatedSyntaxList<ParameterSyntax>()).AddRange(parameters), 
@@ -256,16 +332,177 @@ public class Parser(List<SyntaxToken> tokens)
         {
             statements.Add(ParseStatement());
         }
+
         return SyntaxFactory.Block(
             lparen,
             new SyntaxList<StatementSyntax>(statements),
             MatchToken(SyntaxKind.CloseBraceToken));
     }
 
+    /* ************************************************************ */
+
+    private PropertyDeclarationSyntax ParsePropertyDeclaration()
+    {
+        var modifiers = ParseModifiers([SyntaxKind.PublicKeyword, SyntaxKind.PrivateKeyword]);
+        var type = ParseType();
+        var name = MatchToken(SyntaxKind.IdentifierToken);
+        var accessors = ParseAccessorList();
+
+        return SyntaxFactory.PropertyDeclaration(default, modifiers, type, null, name, accessors);
+    }
+
+    private AccessorListSyntax ParseAccessorList()
+    {
+        var lbrace = MatchToken(SyntaxKind.OpenBraceToken);
+        var decls = ParseAccessorDeclarations();
+        var rbrace = MatchToken(SyntaxKind.CloseBraceToken);
+
+        return SyntaxFactory.AccessorList(lbrace, decls, rbrace);
+    }
+
+    private SyntaxList<AccessorDeclarationSyntax> ParseAccessorDeclarations()
+    {
+        List<AccessorDeclarationSyntax> decls = [];
+        SyntaxKind kind;
+        BlockSyntax? body;
+        while (!Current.IsKind(SyntaxKind.CloseBraceToken))
+        {
+            kind = Current.Kind();
+            switch (kind)
+            {
+                case SyntaxKind.GetKeyword:
+                    body = ParseBlock(); break;
+                case SyntaxKind.SetKeyword:
+                default:
+                    throw new NotImplementedException("Only getter is supported");
+            }
+
+            decls.Add(SyntaxFactory.AccessorDeclaration(kind, body));
+        }
+
+        return (new SyntaxList<AccessorDeclarationSyntax>()).AddRange(decls);
+    }
+
+    /* ************************************************************ */
+
+    /// <summary>
+    /// 还没有像modifiers那样实现预检查。
+    /// </summary>
+    /// <returns></returns>
+    /// <exception cref="NotImplementedException"></exception>
+    private TypeSyntax ParseType()
+    {
+        var currentKind = Current.Kind();
+        if (SyntaxFacts.IsPredefinedType(currentKind))
+        {
+            var type = SyntaxFactory.PredefinedType(Current);
+            _position++;
+            return type;
+        }
+        if (currentKind == SyntaxKind.IdentifierToken)
+        {
+            return SyntaxFactory.IdentifierName(MatchToken(SyntaxKind.IdentifierToken));
+        }
+        throw new NotImplementedException("Only predefiend type and identifier supported");
+    }
+
+    /* ************************************************************ */
+
+    private bool IsEmbeddedStatement()
+    {
+        throw new NotImplementedException("Must determine this");
+    }
     private StatementSyntax ParseStatement()
+    {
+        if (IsEmbeddedStatement())
+        {
+            return ParseEmbeddedStatement();
+        }
+        else
+        {
+            throw new NotImplementedException("DECLARATION_STATEMENT");
+        }
+    }
+
+    /// <summary>
+    /// 文法接近LL(1)。
+    /// </summary>
+    /// <returns></returns>
+    /// <exception cref="NotImplementedException"></exception>
+    private StatementSyntax ParseEmbeddedStatement()
+    {
+        switch (Current.Kind())
+        {
+            case SyntaxKind.IfKeyword:
+                return ParseIfStatement();
+            case SyntaxKind.ForKeyword:
+                return ParseForStatement();
+            case SyntaxKind.WhileKeyword:
+                return ParseWhileStatement();
+            case SyntaxKind.SwitchKeyword:
+                return ParseSwitchStatement();
+            case SyntaxKind.ContinueKeyword:
+                return SyntaxFactory.ContinueStatement(
+                    MatchToken(SyntaxKind.ContinueKeyword), 
+                    MatchToken(SyntaxKind.SemicolonToken));
+            case SyntaxKind.ThrowKeyword:
+                 return SyntaxFactory.ThrowStatement(
+                     MatchToken(SyntaxKind.ThrowKeyword),
+                     ParseExpression(),
+                     MatchToken(SyntaxKind.SemicolonToken));
+            case SyntaxKind.ReturnKeyword:
+                return SyntaxFactory.ReturnStatement(
+                    MatchToken(SyntaxKind.ReturnKeyword),
+                    ParseExpression(),
+                    MatchToken(SyntaxKind.SemicolonToken));
+            case SyntaxKind.OpenBraceToken:
+                return ParseBlock();
+            default:
+                throw new NotImplementedException($"{Current} for what statement?");
+        }
+    }
+
+    private ForStatementSyntax ParseForStatement()
     {
         throw new NotImplementedException();
     }
+
+    /// <summary>
+    /// if-else悬挂问题!
+    /// 本实现使用就近原则。
+    /// </summary>
+    /// <returns></returns>
+    private IfStatementSyntax ParseIfStatement()
+    {
+        var keyword = MatchToken(SyntaxKind.IfKeyword);
+        var lparen = MatchToken(SyntaxKind.OpenParenToken);
+        var condition = ParseExpression();
+        var rparen = MatchToken(SyntaxKind.CloseParenToken);
+        var body = ParseEmbeddedStatement();
+
+        ElseClauseSyntax? elseClause = null;
+        if (Current.IsKind(SyntaxKind.ElseKeyword))
+        {
+            var keywordElse = MatchToken(SyntaxKind.ElseKeyword);
+            var bodyElse = ParseEmbeddedStatement();
+
+            elseClause = SyntaxFactory.ElseClause(keywordElse, bodyElse);
+        }
+
+        return SyntaxFactory.IfStatement(keyword, lparen, condition, rparen, body, elseClause);
+    }
+
+    /// <summary>
+    /// 没有STATEMENT_EXPRESSION这种类型，需要自己辨别。
+    /// </summary>
+    /// <returns></returns>
+    /// <exception cref="NotImplementedException"></exception>
+    private ExpressionStatementSyntax ParseExpressionStatement()
+    {
+        throw new NotImplementedException("ExpressionStatement");
+    }
+
+    /* ************************************************************ */
 
     private ExpressionSyntax ParseExpression()
     {
