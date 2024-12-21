@@ -26,6 +26,12 @@ public class Parser(List<SyntaxToken> tokens)
         throw new Exception($"Expected token of kind {kind}, but got {Current.Text}.");
     }
 
+    /// <summary>
+    /// 向前看token的类型，用于LL预测。
+    /// </summary>
+    /// <param name="k"></param>
+    /// <returns></returns>
+    /// <exception cref="IndexOutOfRangeException"></exception>
     private SyntaxKind PeekTokenKind(int k)
     {
         if (_position + k >= _tokens.Count)
@@ -141,13 +147,19 @@ public class Parser(List<SyntaxToken> tokens)
 
     /* ************************************************************ */
 
-    private ClassDeclarationSyntax ParseClassDeclaration() // TODO
+    /// <summary>
+    /// 语法：
+    /// ClassDeclaration -> CLASS_MODIFIER? ClassKeyword IdentifierToken TypeParameterList? OpenBraceToken CLASS_MEMBER_DECLARATION* CloseBraceToken;
+    /// CLASS_MEMBER_DECLARATION -> FieldDeclaration | MethodDeclaration | PropertyDeclaration;
+    /// </summary>
+    /// <returns></returns>
+    private ClassDeclarationSyntax ParseClassDeclaration()
     {
         var modifiers = ParseModifiers([SyntaxKind.PublicKeyword]);
         var keyword = MatchToken(SyntaxKind.ClassKeyword);
         var name = MatchToken(SyntaxKind.IdentifierToken);
 
-        TypeParameterListSyntax? typeParamList = null; // TODO: class templates
+        TypeParameterListSyntax? typeParamList = null;
         if (Current.IsKind(SyntaxKind.LessThanToken))
         {
             typeParamList = ParseTypeParameterList();
@@ -186,6 +198,12 @@ public class Parser(List<SyntaxToken> tokens)
             || kind is SyntaxKind.StaticKeyword
             );
     }
+
+    /// <summary>
+    /// 不同单元允许的修饰符范围可以不同，经allowed传入。
+    /// </summary>
+    /// <param name="allowed"></param>
+    /// <returns></returns>
     private SyntaxTokenList ParseModifiers(List<SyntaxKind> allowed)
     { 
         List<SyntaxToken> modifiers = [];
@@ -201,16 +219,20 @@ public class Parser(List<SyntaxToken> tokens)
         return new SyntaxTokenList(modifiers);
     }
 
+    /// <summary>
+    /// 支持的语法：
+    /// TypeParameterList -> LessThanToken TypeParameter GreaterThanToken
+    /// TypeParameter -> IdentifierToken
+    /// </summary>
+    /// <returns></returns>
+    /// <exception cref="NotImplementedException"></exception>
     private TypeParameterListSyntax ParseTypeParameterList()
     {
         var langle = MatchToken(SyntaxKind.LessThanToken);
 
+        SeparatedSyntaxList<TypeParameterSyntax> typeParams = [];
         var param = SyntaxFactory.TypeParameter(MatchToken(SyntaxKind.IdentifierToken));
-        SeparatedSyntaxList<TypeParameterSyntax> typeParams = [param];
-        if (!Current.IsKind(SyntaxKind.GreaterThanToken))
-        {
-            throw new NotImplementedException("Only support one type argument");
-        }
+        typeParams.Add(param);
 
         var rangle = MatchToken(SyntaxKind.GreaterThanToken);
         
@@ -235,6 +257,11 @@ public class Parser(List<SyntaxToken> tokens)
         return SyntaxFactory.VariableDeclaration(type, decls); ;
     }
 
+    /// <summary>
+    /// VariableDeclarator -> IdentifierToken EqualsValueClause;
+    /// 逗号分隔。
+    /// </summary>
+    /// <returns></returns>
     private SeparatedSyntaxList<VariableDeclaratorSyntax> ParseVariableDeclarators()
     {
         SeparatedSyntaxList<VariableDeclaratorSyntax> decls = [];
@@ -284,6 +311,10 @@ public class Parser(List<SyntaxToken> tokens)
             semicolonToken: MatchToken(SyntaxKind.SemicolonToken));
     }
 
+    /// <summary>
+    /// ParameterList: OpenParenToken Parameter (CommaToken Parameter)* CloseParenToken
+    /// </summary>
+    /// <returns></returns>
     private ParameterListSyntax ParseParameterList()
     {
         var lparen = MatchToken(SyntaxKind.OpenParenToken);
@@ -316,6 +347,11 @@ public class Parser(List<SyntaxToken> tokens)
             (new SeparatedSyntaxList<ParameterSyntax>()).AddRange(parameters), 
             MatchToken(SyntaxKind.CloseParenToken));
     }
+
+    /// <summary>
+    /// 和形参列表类似。
+    /// </summary>
+    /// <returns></returns>
     private ArgumentListSyntax ParseArgumentList()
     {
 
@@ -356,6 +392,10 @@ public class Parser(List<SyntaxToken> tokens)
 
     /* ************************************************************ */
 
+    /// <summary>
+    /// PropertyDeclaration -> PROPERTY_MODIFIERS? TYPE IdentifierToken AccessorList
+    /// </summary>
+    /// <returns></returns>
     private PropertyDeclarationSyntax ParsePropertyDeclaration()
     {
         var modifiers = ParseModifiers([SyntaxKind.PublicKeyword, SyntaxKind.PrivateKeyword]);
@@ -366,6 +406,10 @@ public class Parser(List<SyntaxToken> tokens)
         return SyntaxFactory.PropertyDeclaration(default, modifiers, type, null, name, accessors);
     }
 
+    /// <summary>
+    /// AccessorList -> OpenBraceToken GetAccessorDeclaration CloseBraceToken
+    /// </summary>
+    /// <returns></returns>
     private AccessorListSyntax ParseAccessorList()
     {
         var lbrace = MatchToken(SyntaxKind.OpenBraceToken);
@@ -375,6 +419,11 @@ public class Parser(List<SyntaxToken> tokens)
         return SyntaxFactory.AccessorList(lbrace, decls, rbrace);
     }
 
+    /// <summary>
+    /// TODO：需要改进吗？
+    /// </summary>
+    /// <returns></returns>
+    /// <exception cref="NotImplementedException"></exception>
     private SyntaxList<AccessorDeclarationSyntax> ParseAccessorDeclarations()
     {
         List<AccessorDeclarationSyntax> decls = [];
@@ -401,7 +450,7 @@ public class Parser(List<SyntaxToken> tokens)
     /* ************************************************************ */
 
     /// <summary>
-    /// 还没有像modifiers那样实现预检查。
+    /// 还没有像modifiers那样实现allowed预检查。
     /// </summary>
     /// <returns></returns>
     /// <exception cref="NotImplementedException"></exception>
@@ -432,7 +481,10 @@ public class Parser(List<SyntaxToken> tokens)
     }
 
     /// <summary>
-    /// 目前只支持变量作为数组规模。
+    /// 目前只支持变量作为数组规模。语法：
+    /// ArrayType: PredefinedType ArrayRankSpecifier;
+    /// ArrayRankSpecifier: OpenBracketToken IdentifierName CloseBracketToken;
+    /// 缺一个OmittedArraySizeExpression的支持（int x[];）
     /// </summary>
     /// <returns></returns>
     /// <exception cref="NotImplementedException"></exception>
@@ -463,6 +515,10 @@ public class Parser(List<SyntaxToken> tokens)
         return SyntaxFactory.ArrayType(elemType, dims);
     }
 
+    /// <summary>
+    /// GenericName -> IdentifierToken TypeArgumentList;
+    /// </summary>
+    /// <returns></returns>
     private GenericNameSyntax ParseGenericName()
     {
         var name = MatchToken(SyntaxKind.IdentifierToken);
@@ -505,6 +561,8 @@ public class Parser(List<SyntaxToken> tokens)
     }
 
     /// <summary>
+    /// 这么区分是为防止“if (j != 0) int k;”
+    /// 同时允许“if (_elements.Count == 0) throw new InvalidOperationException("Stack is empty.");”
     /// 文法接近LL(1)。
     /// </summary>
     /// <returns></returns>
@@ -543,7 +601,8 @@ public class Parser(List<SyntaxToken> tokens)
     }
 
     /// <summary>
-    /// 仅支持变量作为控制变量，还不能用表达式。
+    /// 仅支持变量作为控制变量，还不能用表达式。语法：
+    /// SwitchStatement -> SwitchKeyword OpenParenToken IdentifierName CloseParenToken OpenBraceToken SwitchSection* CloseBraceToken
     /// 也许以后可以加上重复标签检查？
     /// </summary>
     /// <returns></returns>
@@ -629,8 +688,8 @@ public class Parser(List<SyntaxToken> tokens)
     }
 
     /// <summary>
-    /// 初始化器必须是变量定义。
-    /// 暂不支持更新部分采用逗号表达式。
+    /// 初始化器必须是变量定义。暂不支持更新部分采用逗号表达式。语法：
+    /// ForStatement -> ForKeyword OpenParenToken VariableDeclaration SemicolonToken EXPRESSION SemicolonToken STATEMENT_EXPRESSION CloseParenToken Block
     /// </summary>
     /// <returns></returns>
     /// <exception cref="NotImplementedException"></exception>
@@ -685,7 +744,7 @@ public class Parser(List<SyntaxToken> tokens)
     }
 
     /// <summary>
-    /// 没有STATEMENT_EXPRESSION这种类型，需要自己辨别。
+    /// Roslyn没有STATEMENT_EXPRESSION这种类型，需要自己辨别。
     /// </summary>
     /// <returns></returns>
     /// <exception cref="NotImplementedException"></exception>
@@ -697,6 +756,11 @@ public class Parser(List<SyntaxToken> tokens)
         return SyntaxFactory.ExpressionStatement(expr, end);
     }
 
+    /// <summary>
+    /// 支持4种能够单独成句的表达式。
+    /// </summary>
+    /// <returns></returns>
+    /// <exception cref="NotImplementedException"></exception>
     private ExpressionSyntax ParseStatementExpression()
     {
         try
@@ -726,33 +790,11 @@ public class Parser(List<SyntaxToken> tokens)
         }
     }
 
-    private InvocationExpressionSyntax ParseInvocationExpression()
-    {
-        var process = ParseSimpleMemberAccessExpression();
-        var args = ParseArgumentList();
-
-        return SyntaxFactory.InvocationExpression(process, args);
-    }
-
-    private MemberAccessExpressionSyntax ParseSimpleMemberAccessExpression()
-    {
-        ExpressionSyntax left;
-        if (SyntaxFacts.IsPredefinedType(Current.Kind()))
-        {
-            left = ParseType();
-        }
-        else
-        {
-            left = ParseIdentifierName();
-        }
-        var dot = MatchToken(SyntaxKind.DotToken);
-        var right = ParseIdentifierName();
-
-        return SyntaxFactory.MemberAccessExpression(
-            SyntaxKind.SimpleMemberAccessExpression,
-            left, dot, right);
-    }
-
+    /// <summary>
+    /// 语法：
+    /// SimpleAssignmentExpression -> (IdentifierName | ElementAccessExpression) EqualsToken EXPRESSION;
+    /// </summary>
+    /// <returns></returns>
     private AssignmentExpressionSyntax ParseSimpleAssignmentExpression()
     {
         ExpressionSyntax lhs, rhs;
@@ -778,25 +820,6 @@ public class Parser(List<SyntaxToken> tokens)
     /// BracketedArgumentList -> OpenBracketToken Argument CloseBracketToken;
     /// </summary>
     /// <returns></returns>
-    private ElementAccessExpressionSyntax ParseElementAccessExpression()
-    {
-        var collection = ParseIdentifierName();
-
-        var lbrack = MatchToken(SyntaxKind.OpenBracketToken);
-
-        SyntaxList<ArgumentSyntax> indexes = [];
-        var index = SyntaxFactory.Argument(ParseIdentifierName());
-        indexes.Add(index);
-        
-        var rbrack = MatchToken(SyntaxKind.CloseBracketToken);
-
-        return SyntaxFactory.ElementAccessExpression(
-            collection,
-            SyntaxFactory.BracketedArgumentList(
-                lbrack, 
-                (new SeparatedSyntaxList<ArgumentSyntax>()).AddRange(indexes), 
-                rbrack));
-    }
 
     private PostfixUnaryExpressionSyntax ParsePostDecrementExpression()
     {
@@ -844,6 +867,7 @@ public class Parser(List<SyntaxToken> tokens)
     }
     /// <summary>
     /// 这些中缀表达式是右结合的，方便归约分析。
+    /// 不支持嵌入的赋值表达式。
     /// </summary>
     /// <returns></returns>
     private ExpressionSyntax ParseExpression()
@@ -901,7 +925,7 @@ public class Parser(List<SyntaxToken> tokens)
     /* ************************************************************ */
 
     /// <summary>
-    /// 不知道结合律具体如何。
+    /// 没查该优先级内结合律具体如何。我实现为左结合。
     /// </summary>
     /// <returns></returns>
     private ExpressionSyntax ParseAtomExpression()
@@ -1013,4 +1037,50 @@ public class Parser(List<SyntaxToken> tokens)
         }
     }
 
+    private InvocationExpressionSyntax ParseInvocationExpression()
+    {
+        var process = ParseSimpleMemberAccessExpression();
+        var args = ParseArgumentList();
+
+        return SyntaxFactory.InvocationExpression(process, args);
+    }
+
+    private MemberAccessExpressionSyntax ParseSimpleMemberAccessExpression()
+    {
+        ExpressionSyntax left;
+        if (SyntaxFacts.IsPredefinedType(Current.Kind()))
+        {
+            left = ParseType();
+        }
+        else
+        {
+            left = ParseIdentifierName();
+        }
+        var dot = MatchToken(SyntaxKind.DotToken);
+        var right = ParseIdentifierName();
+
+        return SyntaxFactory.MemberAccessExpression(
+            SyntaxKind.SimpleMemberAccessExpression,
+            left, dot, right);
+    }
+
+    private ElementAccessExpressionSyntax ParseElementAccessExpression()
+    {
+        var collection = ParseIdentifierName();
+
+        var lbrack = MatchToken(SyntaxKind.OpenBracketToken);
+
+        SyntaxList<ArgumentSyntax> indexes = [];
+        var index = SyntaxFactory.Argument(ParseIdentifierName());
+        indexes.Add(index);
+        
+        var rbrack = MatchToken(SyntaxKind.CloseBracketToken);
+
+        return SyntaxFactory.ElementAccessExpression(
+            collection,
+            SyntaxFactory.BracketedArgumentList(
+                lbrack, 
+                (new SeparatedSyntaxList<ArgumentSyntax>()).AddRange(indexes), 
+                rbrack));
+    }
 }
