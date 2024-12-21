@@ -544,19 +544,45 @@ public class Parser(List<SyntaxToken> tokens)
 
     /* ************************************************************ */
 
-    private bool IsEmbeddedStatement()
+    /// <summary>
+    /// 检测是否为临时变量声明
+    /// </summary>
+    /// <returns></returns>
+    private bool IsNotEmbeddedStatement()
     {
-        throw new NotImplementedException("Must determine this");
+        bool result = false;
+        for (int i = 0; PeekTokenKind(i+1) != SyntaxKind.SemicolonToken; i++)
+        {
+            if (PeekTokenKind(i) is SyntaxKind.IdentifierToken
+                && PeekTokenKind(i+1) is SyntaxKind.EqualsToken)
+            {
+                result = true;
+                break;
+            }
+        }
+        return result;
     }
+
+    /// <summary>
+    /// 对临时变量，不支持定义。声明语法：
+    /// LocalDeclarationStatement -> VariableDeclaration SemicolonToken;
+    /// </summary>
+    /// <returns></returns>
     private StatementSyntax ParseStatement()
     {
-        if (IsEmbeddedStatement())
+        if (Current.IsKind(SyntaxKind.SemicolonToken))
+            return SyntaxFactory.EmptyStatement();
+
+        if (IsNotEmbeddedStatement())
         {
-            return ParseEmbeddedStatement();
+            var decl = ParseVariableDeclaration();
+            var end = MatchToken(SyntaxKind.SemicolonToken);
+
+            return SyntaxFactory.LocalDeclarationStatement(default, decl, end);
         }
         else
         {
-            throw new NotImplementedException("DECLARATION_STATEMENT");
+            return ParseEmbeddedStatement();
         }
     }
 
