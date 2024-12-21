@@ -1,6 +1,7 @@
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
+using Microsoft.CodeAnalysis.Operations;
 using System.Linq.Expressions;
 
 namespace MiniCSharpCompiler.Core.Parser;
@@ -23,15 +24,6 @@ public class Parser(List<SyntaxToken> tokens)
         }
 
         throw new Exception($"Expected token of kind {kind}, but got {Current.Text}.");
-    }
-
-    private SyntaxToken PeekToken(int k)
-    {
-        if (_position + k >= _tokens.Count)
-        {
-            throw new IndexOutOfRangeException($"Expect {k} more tokens");
-        }
-        return _tokens[_position + k];
     }
 
     private SyntaxKind PeekTokenKind(int k)
@@ -734,6 +726,33 @@ public class Parser(List<SyntaxToken> tokens)
         }
     }
 
+    private InvocationExpressionSyntax ParseInvocationExpression()
+    {
+        var process = ParseSimpleMemberAccessExpression();
+        var args = ParseArgumentList();
+
+        return SyntaxFactory.InvocationExpression(process, args);
+    }
+
+    private MemberAccessExpressionSyntax ParseSimpleMemberAccessExpression()
+    {
+        ExpressionSyntax left;
+        if (SyntaxFacts.IsPredefinedType(Current.Kind()))
+        {
+            left = ParseType();
+        }
+        else
+        {
+            left = ParseIdentifierName();
+        }
+        var dot = MatchToken(SyntaxKind.DotToken);
+        var right = ParseIdentifierName();
+
+        return SyntaxFactory.MemberAccessExpression(
+            SyntaxKind.SimpleMemberAccessExpression,
+            left, dot, right);
+    }
+
     private AssignmentExpressionSyntax ParseSimpleAssignmentExpression()
     {
         ExpressionSyntax lhs, rhs;
@@ -751,6 +770,32 @@ public class Parser(List<SyntaxToken> tokens)
         return SyntaxFactory.AssignmentExpression(
             SyntaxKind.SimpleAssignmentExpression, 
             lhs, eq, rhs);
+    }
+
+    /// <summary>
+    /// 目前仅支持：
+    /// ElementAccessExpression -> IdentifierName BracketedArgumentList;
+    /// BracketedArgumentList -> OpenBracketToken Argument CloseBracketToken;
+    /// </summary>
+    /// <returns></returns>
+    private ElementAccessExpressionSyntax ParseElementAccessExpression()
+    {
+        var collection = ParseIdentifierName();
+
+        var lbrack = MatchToken(SyntaxKind.OpenBracketToken);
+
+        SyntaxList<ArgumentSyntax> indexes = [];
+        var index = SyntaxFactory.Argument(ParseIdentifierName());
+        indexes.Add(index);
+        
+        var rbrack = MatchToken(SyntaxKind.CloseBracketToken);
+
+        return SyntaxFactory.ElementAccessExpression(
+            collection,
+            SyntaxFactory.BracketedArgumentList(
+                lbrack, 
+                (new SeparatedSyntaxList<ArgumentSyntax>()).AddRange(indexes), 
+                rbrack));
     }
 
     private PostfixUnaryExpressionSyntax ParsePostDecrementExpression()
@@ -889,7 +934,42 @@ public class Parser(List<SyntaxToken> tokens)
                 break;
         }
 
-        throw new NotImplementedException("Atom expression");
+        // LR分析解决：成员访问、过程调用、变量名。
+        Stack<ExpressionSyntax> atoms = [];
+        if (SyntaxFacts.IsPredefinedType(Current.Kind()))
+        {
+            atoms.Push(ParseType());
+        }
+        else
+        {
+            atoms.Push(ParseIdentifierName());
+        }
+
+        while (true)
+        {
+            if (Current.IsKind(SyntaxKind.DotToken))
+            {
+                var obj = atoms.Pop();
+                var dot = MatchToken(SyntaxKind.DotToken);
+                var tag = ParseIdentifierName();
+
+                atoms.Push(SyntaxFactory.MemberAccessExpression(
+                    SyntaxKind.SimpleMemberAccessExpression,
+                    obj, dot, tag));
+            }
+            else if (Current.IsKind(SyntaxKind.OpenParenToken))
+            {
+                var proc = atoms.Pop();
+                var args = ParseArgumentList();
+
+                atoms.Push(SyntaxFactory.InvocationExpression(proc, args));
+            }
+            else
+            {
+                break;
+            }
+        }
+        return atoms.Pop();
     }
 
     private InterpolatedStringExpressionSyntax ParseInterpolatedStringExpression()
@@ -924,7 +1004,7 @@ public class Parser(List<SyntaxToken> tokens)
         var type = ParseType();
         if (type.IsKind(SyntaxKind.ArrayType))
         {
-            return SyntaxFactory.ArrayCreationExpression(keyword, type, null);
+            return SyntaxFactory.ArrayCreationExpression(keyword, (ArrayTypeSyntax)type, null);
         }
         else
         {
