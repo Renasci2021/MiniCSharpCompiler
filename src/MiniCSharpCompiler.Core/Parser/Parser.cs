@@ -174,7 +174,6 @@ public class Parser(List<SyntaxToken> tokens)
         }
 
         var rbrace = MatchToken(SyntaxKind.CloseBraceToken);
-        var semicolon = MatchToken(SyntaxKind.SemicolonToken);
 
         return SyntaxFactory.ClassDeclaration(
             attributeLists: default,
@@ -187,7 +186,7 @@ public class Parser(List<SyntaxToken> tokens)
             openBraceToken: lbrace,
             members: new SyntaxList<MemberDeclarationSyntax>(members),
             closeBraceToken: rbrace,
-            semicolonToken: semicolon);
+            semicolonToken: default);
     }
 
     static bool IsModifier(SyntaxKind kind)
@@ -308,11 +307,11 @@ public class Parser(List<SyntaxToken> tokens)
             parameterList: paramList,
             constraintClauses: default,
             body: body,
-            semicolonToken: MatchToken(SyntaxKind.SemicolonToken));
+            semicolonToken: default);
     }
 
     /// <summary>
-    /// ParameterList: OpenParenToken Parameter (CommaToken Parameter)* CloseParenToken
+    /// ParameterList: OpenParenToken (Parameter (CommaToken Parameter)*)? CloseParenToken
     /// </summary>
     /// <returns></returns>
     private ParameterListSyntax ParseParameterList()
@@ -320,32 +319,36 @@ public class Parser(List<SyntaxToken> tokens)
         var lparen = MatchToken(SyntaxKind.OpenParenToken);
         SyntaxList<ParameterSyntax> parameters = [];
         List<SyntaxToken> commas = [];
-        
-        var type = ParseType();
-        var name = MatchToken(SyntaxKind.IdentifierToken);
-        parameters.Add(SyntaxFactory.Parameter(
-            attributeLists: default,
-            modifiers: default,
-            type: type,
-            identifier: name,
-            @default: null));
-        while (Current.IsKind(SyntaxKind.CommaToken))
+
+        if (!Current.IsKind(SyntaxKind.CloseParenToken))
         {
-            commas.Add(MatchToken(SyntaxKind.CommaToken));
-            type = ParseType();
-            name = MatchToken(SyntaxKind.IdentifierToken);
+            var type = ParseType();
+            var name = MatchToken(SyntaxKind.IdentifierToken);
             parameters.Add(SyntaxFactory.Parameter(
                 attributeLists: default,
                 modifiers: default,
                 type: type,
                 identifier: name,
                 @default: null));
+            while (Current.IsKind(SyntaxKind.CommaToken))
+            {
+                commas.Add(MatchToken(SyntaxKind.CommaToken));
+                type = ParseType();
+                name = MatchToken(SyntaxKind.IdentifierToken);
+                parameters.Add(SyntaxFactory.Parameter(
+                    attributeLists: default,
+                    modifiers: default,
+                    type: type,
+                    identifier: name,
+                    @default: null));
+            } 
         }
 
+        var rparen = MatchToken(SyntaxKind.CloseParenToken);
         return SyntaxFactory.ParameterList(
             lparen, 
             (new SeparatedSyntaxList<ParameterSyntax>()).AddRange(parameters), 
-            MatchToken(SyntaxKind.CloseParenToken));
+            rparen);
     }
 
     /// <summary>
@@ -358,13 +361,16 @@ public class Parser(List<SyntaxToken> tokens)
         var lparen = MatchToken(SyntaxKind.OpenParenToken);
         SyntaxList<ArgumentSyntax> args = [];
 
-        var arg = ParseExpression();
-        args.Add(SyntaxFactory.Argument(arg));
-        while (Current.IsKind(SyntaxKind.CommaToken))
+        if (!Current.IsKind(SyntaxKind.CloseParenToken))
         {
-            MatchToken(SyntaxKind.CommaToken);
-            arg = ParseExpression();
+            var arg = ParseExpression();
             args.Add(SyntaxFactory.Argument(arg));
+            while (Current.IsKind(SyntaxKind.CommaToken))
+            {
+                MatchToken(SyntaxKind.CommaToken);
+                arg = ParseExpression();
+                args.Add(SyntaxFactory.Argument(arg));
+            } 
         }
 
         var rparen = MatchToken(SyntaxKind.CloseParenToken);
@@ -457,11 +463,6 @@ public class Parser(List<SyntaxToken> tokens)
     private TypeSyntax ParseType()
     {
         var currentKind = Current.Kind();
-        if (SyntaxFacts.IsPredefinedType(currentKind))
-        {
-            return SyntaxFactory.PredefinedType(MatchToken(currentKind));
-        }
-
         if (PeekTokenKind(1) is SyntaxKind.LessThanToken)
         {
             return ParseGenericName();
@@ -472,6 +473,11 @@ public class Parser(List<SyntaxToken> tokens)
             return ParseArrayType();
         }
         
+        if (SyntaxFacts.IsPredefinedType(currentKind))
+        {
+            return SyntaxFactory.PredefinedType(MatchToken(currentKind));
+        }
+
         if (currentKind == SyntaxKind.IdentifierToken)
         {
             return SyntaxFactory.IdentifierName(MatchToken(SyntaxKind.IdentifierToken));
@@ -504,12 +510,25 @@ public class Parser(List<SyntaxToken> tokens)
         while (Current.IsKind(SyntaxKind.OpenBracketToken))
         {
             var lbrack = MatchToken(SyntaxKind.OpenBracketToken);
-            var size = ParseIdentifierName(); // 注意
+            SyntaxList<ExpressionSyntax> sizes = [];
+            if (Current.IsKind(SyntaxKind.OmittedArraySizeExpressionToken))
+            {
+                MatchToken(SyntaxKind.OmittedArraySizeExpressionToken);
+            }
+            else
+            {
+                sizes.Add(ParseExpression());
+                while (!Current.IsKind(SyntaxKind.CloseBracketToken))
+                {
+                    MatchToken(SyntaxKind.CommaToken);
+                    sizes.Add(ParseIdentifierName());
+                } 
+            }
             var rbrack = MatchToken(SyntaxKind.CloseBracketToken);
 
             dims.Add(SyntaxFactory.ArrayRankSpecifier(
                 lbrack,
-                (new SeparatedSyntaxList<ExpressionSyntax>()).Add(size),
+                (new SeparatedSyntaxList<ExpressionSyntax>()).AddRange(sizes),
                 rbrack));
         }
         return SyntaxFactory.ArrayType(elemType, dims);
@@ -544,28 +563,45 @@ public class Parser(List<SyntaxToken> tokens)
 
     /* ************************************************************ */
 
-    /// <summary>
-    /// 检测是否为临时变量声明
-    /// </summary>
-    /// <returns></returns>
-    private bool IsNotEmbeddedStatement()
+    private bool IsLocalVarDecl()
     {
-        bool result = false;
-        for (int i = 0; PeekTokenKind(i+1) != SyntaxKind.SemicolonToken; i++)
+        var kind = Current.Kind();
+        if (SyntaxFacts.IsPredefinedType(kind)) return true;
+        if (PeekTokenKind(1) is SyntaxKind.LessThanToken)
         {
-            if (PeekTokenKind(i) is SyntaxKind.IdentifierToken
-                && PeekTokenKind(i+1) is SyntaxKind.EqualsToken)
+            for (int i = 2; PeekTokenKind(i) != SyntaxKind.SemicolonToken; i++)
             {
-                result = true;
-                break;
+                if (PeekTokenKind(i) is SyntaxKind.GreaterThanToken
+                    && PeekTokenKind(i + 1) is SyntaxKind.IdentifierToken)
+                {
+                    return true;
+                }
             }
+            return false;
         }
-        return result;
+        if (PeekTokenKind(1) is SyntaxKind.OpenBracketToken)
+        {
+            for (int i = 2; PeekTokenKind(i) != SyntaxKind.SemicolonToken; i++)
+            {
+                if (PeekTokenKind(i) is SyntaxKind.CloseBracketToken
+                    && PeekTokenKind(i + 1) is SyntaxKind.IdentifierToken)
+                {
+                    return true;
+                }
+            }
+            return false;
+        }
+        if (PeekTokenKind(1) is SyntaxKind.IdentifierToken) return true;
+        
+        return false;
     }
 
     /// <summary>
     /// 对临时变量，不支持定义。声明语法：
     /// LocalDeclarationStatement -> VariableDeclaration SemicolonToken;
+    /// 区分embedded语句是为防止“if (j != 0) int k;”
+    /// 同时允许“if (_elements.Count == 0) throw new InvalidOperationException("Stack is empty.");”
+    /// 文法接近LL(1)。
     /// </summary>
     /// <returns></returns>
     private StatementSyntax ParseStatement()
@@ -573,7 +609,43 @@ public class Parser(List<SyntaxToken> tokens)
         if (Current.IsKind(SyntaxKind.SemicolonToken))
             return SyntaxFactory.EmptyStatement();
 
-        if (IsNotEmbeddedStatement())
+        // 筛出LL(1)的embedded语句
+        switch (Current.Kind())
+        {
+            case SyntaxKind.IfKeyword:
+                return ParseIfStatement();
+            case SyntaxKind.ForKeyword:
+                return ParseForStatement();
+            case SyntaxKind.WhileKeyword:
+                return ParseWhileStatement();
+            case SyntaxKind.SwitchKeyword:
+                return ParseSwitchStatement();
+            case SyntaxKind.BreakKeyword:
+                return SyntaxFactory.BreakStatement(
+                    MatchToken(SyntaxKind.BreakKeyword),
+                    MatchToken(SyntaxKind.SemicolonToken));
+            case SyntaxKind.ContinueKeyword:
+                return SyntaxFactory.ContinueStatement(
+                    MatchToken(SyntaxKind.ContinueKeyword),
+                    MatchToken(SyntaxKind.SemicolonToken));
+            case SyntaxKind.ThrowKeyword:
+                return SyntaxFactory.ThrowStatement(
+                    MatchToken(SyntaxKind.ThrowKeyword),
+                    ParseExpression(),
+                    MatchToken(SyntaxKind.SemicolonToken));
+            case SyntaxKind.ReturnKeyword:
+                return SyntaxFactory.ReturnStatement(
+                    MatchToken(SyntaxKind.ReturnKeyword),
+                    ParseExpression(),
+                    MatchToken(SyntaxKind.SemicolonToken));
+            case SyntaxKind.OpenBraceToken:
+                return ParseBlock();
+            default:
+                break;
+        }
+
+        // 下面区分表达式语句和变量名
+        if (IsLocalVarDecl())
         {
             var decl = ParseVariableDeclaration();
             var end = MatchToken(SyntaxKind.SemicolonToken);
@@ -582,7 +654,7 @@ public class Parser(List<SyntaxToken> tokens)
         }
         else
         {
-            return ParseEmbeddedStatement();
+            return ParseExpressionStatement();
         }
     }
 
@@ -904,10 +976,12 @@ public class Parser(List<SyntaxToken> tokens)
         stack.Push(ParseAtomExpression());
         while (!Current.IsKind(SyntaxKind.SemicolonToken)
             && !Current.IsKind(SyntaxKind.CloseParenToken)
-            && !Current.IsKind(SyntaxKind.CloseBraceToken))
+            && !Current.IsKind(SyntaxKind.CloseBraceToken)
+            && !Current.IsKind(SyntaxKind.CloseBracketToken)
+            && !Current.IsKind(SyntaxKind.CommaToken))
         {
             var opKind = Current.Kind();
-            while (GetPrecedence(ops.Peek().Kind()) > GetPrecedence(opKind))
+            while (ops.Count > 0 && GetPrecedence(ops.Peek().Kind()) > GetPrecedence(opKind))
             {
                 var rhs = stack.Pop();
                 var op = ops.Pop();
@@ -961,12 +1035,17 @@ public class Parser(List<SyntaxToken> tokens)
         switch (kind)
         {
             case SyntaxKind.TrueKeyword:
+                return SyntaxFactory.LiteralExpression(SyntaxKind.TrueLiteralExpression, MatchToken(kind));
             case SyntaxKind.FalseKeyword:
+                return SyntaxFactory.LiteralExpression(SyntaxKind.FalseLiteralExpression, MatchToken(kind));
             case SyntaxKind.NullKeyword:
+                return SyntaxFactory.LiteralExpression(SyntaxKind.NullLiteralExpression, MatchToken(kind));
             case SyntaxKind.NumericLiteralToken:
+                return SyntaxFactory.LiteralExpression(SyntaxKind.NumericLiteralExpression, MatchToken(kind));
             case SyntaxKind.StringLiteralToken:
+                return SyntaxFactory.LiteralExpression(SyntaxKind.StringLiteralExpression, MatchToken(kind));
             case SyntaxKind.CharacterLiteralToken:
-                return SyntaxFactory.LiteralExpression(kind, MatchToken(kind));
+                return SyntaxFactory.LiteralExpression(SyntaxKind.CharacterLiteralExpression, MatchToken(kind));
 
             case SyntaxKind.InterpolatedStringStartToken:
                 return ParseInterpolatedStringExpression();
@@ -1013,6 +1092,13 @@ public class Parser(List<SyntaxToken> tokens)
                 var args = ParseArgumentList();
 
                 atoms.Push(SyntaxFactory.InvocationExpression(proc, args));
+            }
+            else if (Current.IsKind(SyntaxKind.OpenBracketToken))
+            {
+                var collection = atoms.Pop();
+                var brackedList = ParseBracketedArgumentList();
+
+                atoms.Push(SyntaxFactory.ElementAccessExpression(collection, brackedList));
             }
             else
             {
@@ -1093,20 +1179,23 @@ public class Parser(List<SyntaxToken> tokens)
     private ElementAccessExpressionSyntax ParseElementAccessExpression()
     {
         var collection = ParseIdentifierName();
+        BracketedArgumentListSyntax brackedList = ParseBracketedArgumentList();
 
+        return SyntaxFactory.ElementAccessExpression(collection, brackedList);
+    }
+
+    private BracketedArgumentListSyntax ParseBracketedArgumentList()
+    {
         var lbrack = MatchToken(SyntaxKind.OpenBracketToken);
 
         SyntaxList<ArgumentSyntax> indexes = [];
-        var index = SyntaxFactory.Argument(ParseIdentifierName());
+        var index = SyntaxFactory.Argument(ParseExpression());
         indexes.Add(index);
-        
-        var rbrack = MatchToken(SyntaxKind.CloseBracketToken);
 
-        return SyntaxFactory.ElementAccessExpression(
-            collection,
-            SyntaxFactory.BracketedArgumentList(
-                lbrack, 
-                (new SeparatedSyntaxList<ArgumentSyntax>()).AddRange(indexes), 
-                rbrack));
+        var rbrack = MatchToken(SyntaxKind.CloseBracketToken);
+        return SyntaxFactory.BracketedArgumentList(
+                lbrack,
+                (new SeparatedSyntaxList<ArgumentSyntax>()).AddRange(indexes),
+                rbrack);
     }
 }

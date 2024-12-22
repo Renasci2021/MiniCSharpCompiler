@@ -18,7 +18,7 @@ public readonly struct Token(SyntaxKind kind, string value)
             case SyntaxKind.IdentifierToken:
                 return SyntaxFactory.Identifier(LeadingTrivia, Value, TrailingTrivia);
             case SyntaxKind.CharacterLiteralToken:
-                return SyntaxFactory.Literal(LeadingTrivia, Value, Value[1], TrailingTrivia); // Lexer使用Regex(@"^'.'")匹配
+                return SyntaxFactory.Literal(LeadingTrivia, Value, Value[0], TrailingTrivia); // Lexer使用Regex(@"^'.'")匹配
             case SyntaxKind.NumericLiteralToken:
                 return SyntaxFactory.Literal(LeadingTrivia, Value, int.Parse(Value), TrailingTrivia); // Lexer使用Regex(@"^\d+")匹配
             default:
