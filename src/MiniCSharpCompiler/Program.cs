@@ -30,11 +30,11 @@ class Program
         var tokens = lexer.Tokenize(sourceCode);
 
         // 语法分析
-        // var syntaxTokens = tokens.Select(token => token.ToSyntaxToken()).ToList();
-        // var parser = new Parser(syntaxTokens);
-        // var syntaxTree = parser.Parse();
-        var parser = new StandardParser();
-        var syntaxTree = parser.Parse(tokens);
+        var syntaxTokens = tokens.Select(token => token.ToSyntaxToken()).ToList();
+        var parser = new Parser(syntaxTokens);
+        var syntaxTree = parser.Parse();
+        // var parser = new StandardParser();
+        // var syntaxTree = parser.Parse(tokens);
 
         SyntaxPrinter.PrintSyntaxTree(syntaxTree, printTrivia: false);
         Console.WriteLine();
