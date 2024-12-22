@@ -207,6 +207,19 @@ public class SemanticAnalyzer
         {
             if (localDecl.Declaration.Variables[i].Initializer != null)
             {
+                SyntaxKind declaredType = GetTypeKind(localDecl.Declaration.Type);
+                SyntaxKind initializerType = GetExpressionType(localDecl.Declaration.Variables[i].Initializer!.Value);
+
+                // 新增类型检查
+                if (declaredType != SyntaxKind.None
+                    && initializerType != SyntaxKind.None
+                    && declaredType != initializerType)
+                {
+                    ReportError(
+                        $"类型不匹配：无法将类型 '{initializerType}' 赋值给 '{declaredType}'",
+                        localDecl.Declaration.Variables[i].Initializer!.Value.GetLocation()
+                    );
+                }
                 Console.WriteLine("分析变量初始化：");
                 Console.WriteLine(localDecl.Declaration.Variables[i].Initializer!.Value);
                 Console.WriteLine(localDecl.Declaration.Variables[i].Initializer!.Value.GetType());
@@ -253,7 +266,7 @@ public class SemanticAnalyzer
                 }
 
                 if (leftType != rightType && rightType != SyntaxKind.None && leftType != SyntaxKind.None)
-                
+
                 {
                     ReportError($"类型不匹配：'{leftType}' 和 '{rightType}'", assignment.GetLocation());
                 }
@@ -290,18 +303,18 @@ public class SemanticAnalyzer
     }
 
     private bool IsAssignableExpression(ExpressionSyntax expression)
-{
-    return expression switch
     {
-        IdentifierNameSyntax => true, // 变量名
-        MemberAccessExpressionSyntax => true, // 成员访问
-        ElementAccessExpressionSyntax => true, // 数组访问
-        // PointerIndirectionExpressionSyntax => true, // 指针解引用
-        TupleExpressionSyntax => true, // 元组表达式
-        ThisExpressionSyntax => true, // this 在某些上下文中可赋值
-        _ => false
-    };
-}
+        return expression switch
+        {
+            IdentifierNameSyntax => true, // 变量名
+            MemberAccessExpressionSyntax => true, // 成员访问
+            ElementAccessExpressionSyntax => true, // 数组访问
+                                                   // PointerIndirectionExpressionSyntax => true, // 指针解引用
+            TupleExpressionSyntax => true, // 元组表达式
+            ThisExpressionSyntax => true, // this 在某些上下文中可赋值
+            _ => false
+        };
+    }
 
 
 
@@ -317,22 +330,22 @@ public class SemanticAnalyzer
                 {
                     return symbol?.Type ?? SyntaxKind.None;
                 }
-                else if(identifier.Identifier.Text == "true" || identifier.Identifier.Text == "false")
+                else if (identifier.Identifier.Text == "true" || identifier.Identifier.Text == "false")
                 {
                     return SyntaxKind.BoolKeyword;
                 }
-                else if(identifier.Identifier.Text == "null")
+                else if (identifier.Identifier.Text == "null")
                 {
                     return SyntaxKind.NullKeyword;
                 }
-                else if(identifier.Identifier.Text == "Length")
+                else if (identifier.Identifier.Text == "Length")
                 {
                     return SyntaxKind.IntKeyword;
                 }
                 else
                 {
                     ReportError($"未定义的变量 '{identifier.Identifier.Text}'", identifier.GetLocation());
-                    
+
                 }
                 break;
 
@@ -367,7 +380,7 @@ public class SemanticAnalyzer
             //////
             case MemberAccessExpressionSyntax parenthesized:
                 // 递归分析成员访问表达式
-                SyntaxKind a=GetExpressionType(parenthesized.Expression);
+                SyntaxKind a = GetExpressionType(parenthesized.Expression);
                 return GetExpressionType(parenthesized.Name);
 
             case ParenthesizedExpressionSyntax parenthesized:
@@ -641,7 +654,7 @@ public class SemanticAnalyzer
         ArrayTypeSyntax => SyntaxKind.ArrayType,
         _ => SyntaxKind.None
     };
-    
+
 
     private void ReportError(string message, Location location)
     {
