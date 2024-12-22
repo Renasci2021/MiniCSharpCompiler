@@ -10,10 +10,10 @@ class Program
 
         for (int i = 1; i < numbers.Length; i++)
         {
-            int key = numbers[i];
+            // int key = numbers[i];
             int j = i - 1;
 
-            while (numbers[j] > key)
+            while (numbers[j] > numbers[i])
             {
                 numbers[j + 1] = numbers[j];
                 j = j - 1;
@@ -23,7 +23,7 @@ class Program
                     break;
                 }
             }
-            numbers[j + 1] = key;
+            numbers[j + 1] = numbers[i];
         }
 
         Console.WriteLine("Sorted numbers:");

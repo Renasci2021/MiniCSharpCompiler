@@ -63,7 +63,7 @@ public class SymbolTable
         if (currentScope != null)
         {
             var scopedName = $"{currentScope.FullName}.{name}";
-            if (_symbols.TryGetValue(scopedName, out symbol))
+            if (TryGetSymbol(scopedName, out symbol))
                 return true;
 
             // 2. 递归检查父作用域

@@ -185,6 +185,7 @@ public class SemanticAnalyzer
     {
         foreach (var variable in localDecl.Declaration.Variables)
         {
+            Console.WriteLine(localDecl.Declaration.Type);
             var symbol = new Symbol(
                 variable.Identifier.Text,
                 SymbolKind.Variable,
@@ -277,6 +278,14 @@ public class SemanticAnalyzer
                 Console.WriteLine(postfixUnary);
                 AnalyzeUnaryExpression(postfixUnary.OperatorToken, postfixUnary.Operand);
                 break;
+            case InitializerExpressionSyntax initializer:
+                Console.WriteLine("分析初始化表达式：");
+                Console.WriteLine(initializer);
+                foreach (var expression1 in initializer.Expressions)
+                {
+                    AnalyzeExpression(expression1);
+                }
+                break;
         }
     }
 
@@ -307,6 +316,18 @@ public class SemanticAnalyzer
                 if (_symbolTable.TryResolveSymbol(identifier.Identifier.Text, _currentScope, out var symbol))
                 {
                     return symbol?.Type ?? SyntaxKind.None;
+                }
+                else if(identifier.Identifier.Text == "true" || identifier.Identifier.Text == "false")
+                {
+                    return SyntaxKind.BoolKeyword;
+                }
+                else if(identifier.Identifier.Text == "null")
+                {
+                    return SyntaxKind.NullKeyword;
+                }
+                else if(identifier.Identifier.Text == "Length")
+                {
+                    return SyntaxKind.IntKeyword;
                 }
                 else
                 {
@@ -343,11 +364,19 @@ public class SemanticAnalyzer
                 // 检查赋值左右两边类型是否匹配
                 AnalyzeExpression(assignment);
                 return GetExpressionType(assignment.Right);
-            
+            //////
+            case MemberAccessExpressionSyntax parenthesized:
+                // 递归分析成员访问表达式
+                SyntaxKind a=GetExpressionType(parenthesized.Expression);
+                return GetExpressionType(parenthesized.Name);
+
             case ParenthesizedExpressionSyntax parenthesized:
                 // 递归分析括号内的表达式
                 return GetExpressionType(parenthesized.Expression);
 
+            case ElementAccessExpressionSyntax elementAccess:
+                // 递归分析数组访问表达式
+                return GetExpressionType(elementAccess.Expression);
         }
 
         return SyntaxKind.None;
@@ -369,7 +398,7 @@ public class SemanticAnalyzer
                 {
                     return SyntaxKind.IntKeyword; // 数值运算返回数值类型
                 }
-                ReportError($"操作符 '{binaryExpr.OperatorToken}' 不支持操作数类型 '{leftType}' 和 '{rightType}'", binaryExpr.GetLocation());
+                ReportError($"算数运算符 '{binaryExpr.OperatorToken}' 不支持操作数类型 '{leftType}' 和 '{rightType}'", binaryExpr.GetLocation());
                 break;
 
             // 比较运算符
@@ -383,7 +412,7 @@ public class SemanticAnalyzer
                 {
                     return SyntaxKind.BoolKeyword; // 比较运算返回布尔类型
                 }
-                ReportError($"操作符 '{binaryExpr.OperatorToken}' 不支持操作数类型 '{leftType}' 和 '{rightType}'", binaryExpr.GetLocation());
+                ReportError($"比较运算符 '{binaryExpr.OperatorToken}' 不支持操作数类型 '{leftType}' 和 '{rightType}'", binaryExpr.GetLocation());
                 break;
 
             // 逻辑运算符
@@ -609,8 +638,10 @@ public class SemanticAnalyzer
     {
         PredefinedTypeSyntax p => p.Keyword.Kind(),
         IdentifierNameSyntax => SyntaxKind.IdentifierName,
+        ArrayTypeSyntax => SyntaxKind.ArrayType,
         _ => SyntaxKind.None
     };
+    
 
     private void ReportError(string message, Location location)
     {
