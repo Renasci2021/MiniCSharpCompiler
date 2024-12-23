@@ -25,8 +25,6 @@ public class SemanticAnalyzer
         // 分析命名空间成员
         foreach (var member in root.Members)
         {
-            Console.WriteLine("分析成员：");
-            Console.WriteLine(member);
             AnalyzeMember(member);
         }
 
@@ -38,13 +36,9 @@ public class SemanticAnalyzer
         switch (member)
         {
             case NamespaceDeclarationSyntax ns:
-                Console.WriteLine("分析命名空间：");
-                Console.WriteLine(ns);
                 AnalyzeNamespace(ns);
                 break;
             case ClassDeclarationSyntax cls:
-                Console.WriteLine("分析类：");
-                Console.WriteLine(cls);
                 AnalyzeClass(cls);
                 break;
         }
@@ -88,8 +82,6 @@ public class SemanticAnalyzer
         {
             if (member is MethodDeclarationSyntax method)
             {
-                Console.WriteLine("分析方法：");
-                Console.WriteLine(method);
                 AnalyzeMethod(method);
             }
         }
@@ -113,16 +105,12 @@ public class SemanticAnalyzer
         // 分析参数
         foreach (var param in method.ParameterList.Parameters)
         {
-            Console.WriteLine("分析参数：");
-            Console.WriteLine(param);
             AnalyzeParameter(param);
         }
 
         // 分析方法体
         if (method.Body != null)
         {
-            Console.WriteLine("分析方法体：");
-            Console.WriteLine(method.Body);
             AnalyzeStatements(method.Body.Statements);
         }
 
@@ -146,35 +134,27 @@ public class SemanticAnalyzer
             switch (statement)
             {
                 case LocalDeclarationStatementSyntax localDecl:
-                    Console.WriteLine("分析局部变量声明：");
-                    Console.WriteLine(localDecl);
                     AnalyzeLocalDeclaration(localDecl);
                     break;
 
                 case ExpressionStatementSyntax expressionStmt:
-                    Console.WriteLine("分析表达式语句：");
-                    Console.WriteLine(expressionStmt);
                     AnalyzeExpression(expressionStmt.Expression);
                     break;
 
                 //TODO: 
                 // case ReturnStatementSyntax returnStmt:
-                //     Console.WriteLine("分析返回语句：");
                 //     AnalyzeExpression(returnStmt.Expression);
                 //     break;
 
                 case ForStatementSyntax forStmt:
-                    Console.WriteLine("分析 for 循环：");
                     AnalyzeForStatement(forStmt);
                     break;
 
                 case WhileStatementSyntax whileStmt:
-                    Console.WriteLine("分析 while 循环：");
                     AnalyzeWhileStatement(whileStmt);
                     break;
 
                 case IfStatementSyntax ifStmt:
-                    Console.WriteLine("分析 if 语句：");
                     AnalyzeIfStatement(ifStmt);
                     break;
             }
@@ -185,7 +165,6 @@ public class SemanticAnalyzer
     {
         foreach (var variable in localDecl.Declaration.Variables)
         {
-            Console.WriteLine(localDecl.Declaration.Type);
             var symbol = new Symbol(
                 variable.Identifier.Text,
                 SymbolKind.Variable,
@@ -193,9 +172,6 @@ public class SemanticAnalyzer
                 _currentScope
             );
 
-            Console.WriteLine("分析变量：");
-            Console.WriteLine(variable);
-            Console.WriteLine(symbol);
 
             if (!_symbolTable.TryAddSymbol(symbol))
             {
@@ -220,9 +196,6 @@ public class SemanticAnalyzer
                         localDecl.Declaration.Variables[i].Initializer!.Value.GetLocation()
                     );
                 }
-                Console.WriteLine("分析变量初始化：");
-                Console.WriteLine(localDecl.Declaration.Variables[i].Initializer!.Value);
-                Console.WriteLine(localDecl.Declaration.Variables[i].Initializer!.Value.GetType());
                 AnalyzeExpression(localDecl.Declaration.Variables[i].Initializer!.Value);
             }
         }
@@ -233,7 +206,6 @@ public class SemanticAnalyzer
         switch (expression)
         {
             case IdentifierNameSyntax identifier:
-                Console.WriteLine("分析标识符：");
                 // 检查变量是否已定义
                 if (!_symbolTable.TryResolveSymbol(identifier.Identifier.Text, _currentScope, out _))
                 {
@@ -242,7 +214,6 @@ public class SemanticAnalyzer
                 break;
 
             case InvocationExpressionSyntax invocation:
-                Console.WriteLine("分析方法调用：");
                 // 检查方法调用
                 if (invocation.Expression is IdentifierNameSyntax methodName)
                 {
@@ -255,7 +226,6 @@ public class SemanticAnalyzer
                 break;
 
             case AssignmentExpressionSyntax assignment:
-                Console.WriteLine("分析赋值表达式：");
                 // 检查赋值左右两边类型是否匹配
                 var leftType = GetExpressionType(assignment.Left);
                 var rightType = GetExpressionType(assignment.Right);
@@ -277,23 +247,15 @@ public class SemanticAnalyzer
 
                 break;
             case BinaryExpressionSyntax binaryExpr:
-                Console.WriteLine("分析二元表达式：");
-                Console.WriteLine(binaryExpr);
                 AnalyzeBinaryExpression(binaryExpr);
                 break;
             case PrefixUnaryExpressionSyntax prefixUnary:
-                Console.WriteLine("分析前缀一元表达式：");
-                Console.WriteLine(prefixUnary);
                 AnalyzeUnaryExpression(prefixUnary.OperatorToken, prefixUnary.Operand);
                 break;
             case PostfixUnaryExpressionSyntax postfixUnary:
-                Console.WriteLine("分析后缀一元表达式：");
-                Console.WriteLine(postfixUnary);
                 AnalyzeUnaryExpression(postfixUnary.OperatorToken, postfixUnary.Operand);
                 break;
             case InitializerExpressionSyntax initializer:
-                Console.WriteLine("分析初始化表达式：");
-                Console.WriteLine(initializer);
                 foreach (var expression1 in initializer.Expressions)
                 {
                     AnalyzeExpression(expression1);
@@ -320,9 +282,6 @@ public class SemanticAnalyzer
 
     private SyntaxKind GetExpressionType(ExpressionSyntax expression)
     {
-        Console.WriteLine("分析表达式类型：");
-        Console.WriteLine(expression);
-        Console.WriteLine(expression.GetType());
         switch (expression)
         {
             case IdentifierNameSyntax identifier:
@@ -367,13 +326,10 @@ public class SemanticAnalyzer
 
             case BinaryExpressionSyntax binaryExpr:
                 // 简单类型推导：假设操作数类型相同，返回相同类型
-                Console.WriteLine("分析二元表达式：");
-                Console.WriteLine(binaryExpr);
 
                 return AnalyzeBinaryExpression(binaryExpr);
 
             case AssignmentExpressionSyntax assignment:
-                Console.WriteLine("分析赋值表达式：");
                 // 检查赋值左右两边类型是否匹配
                 AnalyzeExpression(assignment);
                 return GetExpressionType(assignment.Right);
@@ -517,12 +473,8 @@ public class SemanticAnalyzer
             // AnalyzeExpression(whileStmt.Condition);
             // 在GetExpressionType中已经分析了whileStmt.Condition
             var conditionType = GetExpressionType(whileStmt.Condition);
-            Console.WriteLine("以下是 while 循环条件：");
-            Console.WriteLine(whileStmt.Condition);
             if (conditionType != SyntaxKind.BoolKeyword)
             {
-                Console.WriteLine(conditionType);
-                Console.WriteLine("while 循环条件必须是布尔类型");
                 ReportError("while 循环条件必须是布尔类型", whileStmt.Condition.GetLocation());
             }
         }
@@ -530,12 +482,9 @@ public class SemanticAnalyzer
         // 分析循环体
         if (whileStmt.Statement == null)
         {
-            Console.WriteLine("Statement is null.");
         }
         else
         {
-            Console.WriteLine($"Statement type: {whileStmt.Statement.GetType()}");
-            Console.WriteLine($"Statement content: {whileStmt.Statement.ToFullString()}");
         }
 
         var statementsInWhlie = whileStmt.Statement is BlockSyntax block
@@ -576,18 +525,15 @@ public class SemanticAnalyzer
     private void AnalyzeForStatement(ForStatementSyntax forStmt)
     {
         // 分析初始化表达式
+#pragma warning disable CS8073 // 由于此类型的值永不等于 "null"，该表达式的结果始终相同
         if (forStmt.Declaration != null)
         {
-            Console.WriteLine("分析For Declaration：");
-            Console.WriteLine(forStmt.Declaration);
             AnalyzeLocalDeclaration(SyntaxFactory.LocalDeclarationStatement(forStmt.Declaration));
         }
         else if (forStmt.Initializers != null)
         {
-            Console.WriteLine("分析For Initializers：");
             foreach (var initializer in forStmt.Initializers)
             {
-                Console.WriteLine(initializer);
                 if (!(initializer is AssignmentExpressionSyntax || initializer is InvocationExpressionSyntax))
                 {
                     ReportError("for 循环初始化部分必须是赋值或函数调用", initializer.GetLocation());
@@ -595,12 +541,11 @@ public class SemanticAnalyzer
                 AnalyzeExpression(initializer);
             }
         }
+#pragma warning restore CS8073 // 由于此类型的值永不等于 "null"，该表达式的结果始终相同
 
         // 分析条件表达式
         if (forStmt.Condition != null)
         {
-            Console.WriteLine("分析For Condition：");
-            Console.WriteLine(forStmt.Condition);
             // AnalyzeExpression(forStmt.Condition);
             // 在GetExpressionType中已经分析了forStmt.Condition
             var conditionType = GetExpressionType(forStmt.Condition);
@@ -613,7 +558,6 @@ public class SemanticAnalyzer
         // 分析迭代表达式
         foreach (var incrementor in forStmt.Incrementors)
         {
-            Console.WriteLine("分析For Incrementor：");
             AnalyzeExpression(incrementor);
         }
 
@@ -624,7 +568,6 @@ public class SemanticAnalyzer
                 ? SyntaxFactory.List(new[] { forStmt.Statement })
         : default(SyntaxList<StatementSyntax>);
 
-        Console.WriteLine("分析For Statements ：");
 
         AnalyzeStatements(statementsInFor);
     }

@@ -27,7 +27,7 @@ public class Parser(List<SyntaxToken> tokens)
     }
 
     /// <summary>
-    /// ÏòÇ°¿´tokenµÄÀàĞÍ£¬ÓÃÓÚLLÔ¤²â¡£
+    /// ï¿½ï¿½Ç°ï¿½ï¿½tokenï¿½ï¿½ï¿½ï¿½ï¿½Í£ï¿½ï¿½ï¿½ï¿½ï¿½LLÔ¤ï¿½â¡£
     /// </summary>
     /// <param name="k"></param>
     /// <returns></returns>
@@ -80,8 +80,8 @@ public class Parser(List<SyntaxToken> tokens)
     }
 
     /// <summary>
-    /// ²¢²»ÑÏ¸ñ·µ»ØQualifiedName¡£
-    /// ÈôÎŞDotToken£¬Ôò·µ»ØÒ»¸öIdentifierName¡£
+    /// ï¿½ï¿½ï¿½ï¿½ï¿½Ï¸ñ·µ»ï¿½QualifiedNameï¿½ï¿½
+    /// ï¿½ï¿½ï¿½ï¿½DotTokenï¿½ï¿½ï¿½ò·µ»ï¿½Ò»ï¿½ï¿½IdentifierNameï¿½ï¿½
     /// </summary>
     private NameSyntax ParseQualifiedName()
     {
@@ -96,7 +96,7 @@ public class Parser(List<SyntaxToken> tokens)
         QualifiedNameSyntax result = SyntaxFactory.QualifiedName(left, right);
         while (Current.IsKind(SyntaxKind.DotToken))
         {
-            MatchToken(SyntaxKind.DotToken); // ÕÔÅàÔ´ĞŞ¸Ä
+            MatchToken(SyntaxKind.DotToken); // ï¿½ï¿½ï¿½ï¿½Ô´ï¿½Ş¸ï¿½
             right = ParseSimpleName();
             result = SyntaxFactory.QualifiedName(result, right);
         }
@@ -148,7 +148,7 @@ public class Parser(List<SyntaxToken> tokens)
     /* ************************************************************ */
 
     /// <summary>
-    /// Óï·¨£º
+    /// ï¿½ï·¨ï¿½ï¿½
     /// ClassDeclaration -> CLASS_MODIFIER? ClassKeyword IdentifierToken TypeParameterList? OpenBraceToken CLASS_MEMBER_DECLARATION* CloseBraceToken;
     /// CLASS_MEMBER_DECLARATION -> FieldDeclaration | MethodDeclaration | PropertyDeclaration;
     /// </summary>
@@ -199,7 +199,7 @@ public class Parser(List<SyntaxToken> tokens)
     }
 
     /// <summary>
-    /// ²»Í¬µ¥ÔªÔÊĞíµÄĞŞÊÎ·û·¶Î§¿ÉÒÔ²»Í¬£¬¾­allowed´«Èë¡£
+    /// ï¿½ï¿½Í¬ï¿½ï¿½Ôªï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Î·ï¿½ï¿½ï¿½Î§ï¿½ï¿½ï¿½Ô²ï¿½Í¬ï¿½ï¿½ï¿½ï¿½allowedï¿½ï¿½ï¿½ë¡£
     /// </summary>
     /// <param name="allowed"></param>
     /// <returns></returns>
@@ -219,7 +219,7 @@ public class Parser(List<SyntaxToken> tokens)
     }
 
     /// <summary>
-    /// Ö§³ÖµÄÓï·¨£º
+    /// Ö§ï¿½Öµï¿½ï¿½ï·¨ï¿½ï¿½
     /// TypeParameterList -> LessThanToken TypeParameter GreaterThanToken
     /// TypeParameter -> IdentifierToken
     /// </summary>
@@ -258,7 +258,7 @@ public class Parser(List<SyntaxToken> tokens)
 
     /// <summary>
     /// VariableDeclarator -> IdentifierToken EqualsValueClause;
-    /// ¶ººÅ·Ö¸ô¡£
+    /// ï¿½ï¿½ï¿½Å·Ö¸ï¿½ï¿½ï¿½
     /// </summary>
     /// <returns></returns>
     private SeparatedSyntaxList<VariableDeclaratorSyntax> ParseVariableDeclarators()
@@ -297,6 +297,7 @@ public class Parser(List<SyntaxToken> tokens)
         var paramList = ParseParameterList();
         var body = ParseBlock();
 
+#pragma warning disable CS8625 // æ— æ³•å°† null å­—é¢é‡è½¬æ¢ä¸ºé null çš„å¼•ç”¨ç±»å‹ã€‚
         return SyntaxFactory.MethodDeclaration(
             attributeLists: default,
             modifiers: modifiers,
@@ -308,6 +309,7 @@ public class Parser(List<SyntaxToken> tokens)
             constraintClauses: default,
             body: body,
             semicolonToken: default);
+#pragma warning restore CS8625 // æ— æ³•å°† null å­—é¢é‡è½¬æ¢ä¸ºé null çš„å¼•ç”¨ç±»å‹ã€‚
     }
 
     /// <summary>
@@ -352,7 +354,7 @@ public class Parser(List<SyntaxToken> tokens)
     }
 
     /// <summary>
-    /// ºÍĞÎ²ÎÁĞ±íÀàËÆ¡£
+    /// ï¿½ï¿½ï¿½Î²ï¿½ï¿½Ğ±ï¿½ï¿½ï¿½ï¿½Æ¡ï¿½
     /// </summary>
     /// <returns></returns>
     private ArgumentListSyntax ParseArgumentList()
@@ -426,7 +428,7 @@ public class Parser(List<SyntaxToken> tokens)
     }
 
     /// <summary>
-    /// TODO£ºĞèÒª¸Ä½øÂğ£¿
+    /// TODOï¿½ï¿½ï¿½ï¿½Òªï¿½Ä½ï¿½ï¿½ï¿½
     /// </summary>
     /// <returns></returns>
     /// <exception cref="NotImplementedException"></exception>
@@ -456,7 +458,7 @@ public class Parser(List<SyntaxToken> tokens)
     /* ************************************************************ */
 
     /// <summary>
-    /// »¹Ã»ÓĞÏñmodifiersÄÇÑùÊµÏÖallowedÔ¤¼ì²é¡£
+    /// ï¿½ï¿½Ã»ï¿½ï¿½ï¿½ï¿½modifiersï¿½ï¿½ï¿½ï¿½Êµï¿½ï¿½allowedÔ¤ï¿½ï¿½é¡£
     /// </summary>
     /// <returns></returns>
     /// <exception cref="NotImplementedException"></exception>
@@ -487,10 +489,10 @@ public class Parser(List<SyntaxToken> tokens)
     }
 
     /// <summary>
-    /// Ä¿Ç°Ö»Ö§³Ö±äÁ¿×÷ÎªÊı×é¹æÄ£¡£Óï·¨£º
+    /// Ä¿Ç°Ö»Ö§ï¿½Ö±ï¿½ï¿½ï¿½ï¿½ï¿½Îªï¿½ï¿½ï¿½ï¿½ï¿½Ä£ï¿½ï¿½ï¿½ï·¨ï¿½ï¿½
     /// ArrayType: PredefinedType ArrayRankSpecifier;
     /// ArrayRankSpecifier: OpenBracketToken IdentifierName CloseBracketToken;
-    /// È±Ò»¸öOmittedArraySizeExpressionµÄÖ§³Ö£¨int x[];£©
+    /// È±Ò»ï¿½ï¿½OmittedArraySizeExpressionï¿½ï¿½Ö§ï¿½Ö£ï¿½int x[];ï¿½ï¿½
     /// </summary>
     /// <returns></returns>
     /// <exception cref="NotImplementedException"></exception>
@@ -597,11 +599,11 @@ public class Parser(List<SyntaxToken> tokens)
     }
 
     /// <summary>
-    /// ¶ÔÁÙÊ±±äÁ¿£¬²»Ö§³Ö¶¨Òå¡£ÉùÃ÷Óï·¨£º
+    /// ï¿½ï¿½ï¿½ï¿½Ê±ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ö§ï¿½Ö¶ï¿½ï¿½å¡£ï¿½ï¿½ï¿½ï¿½ï¿½ï·¨ï¿½ï¿½
     /// LocalDeclarationStatement -> VariableDeclaration SemicolonToken;
-    /// Çø·ÖembeddedÓï¾äÊÇÎª·ÀÖ¹¡°if (j != 0) int k;¡±
-    /// Í¬Ê±ÔÊĞí¡°if (_elements.Count == 0) throw new InvalidOperationException("Stack is empty.");¡±
-    /// ÎÄ·¨½Ó½üLL(1)¡£
+    /// ï¿½ï¿½ï¿½ï¿½embeddedï¿½ï¿½ï¿½ï¿½ï¿½Îªï¿½ï¿½Ö¹ï¿½ï¿½if (j != 0) int k;ï¿½ï¿½
+    /// Í¬Ê±ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½if (_elements.Count == 0) throw new InvalidOperationException("Stack is empty.");ï¿½ï¿½
+    /// ï¿½Ä·ï¿½ï¿½Ó½ï¿½LL(1)ï¿½ï¿½
     /// </summary>
     /// <returns></returns>
     private StatementSyntax ParseStatement()
@@ -609,7 +611,7 @@ public class Parser(List<SyntaxToken> tokens)
         if (Current.IsKind(SyntaxKind.SemicolonToken))
             return SyntaxFactory.EmptyStatement();
 
-        // É¸³öLL(1)µÄembeddedÓï¾ä
+        // É¸ï¿½ï¿½LL(1)ï¿½ï¿½embeddedï¿½ï¿½ï¿½
         switch (Current.Kind())
         {
             case SyntaxKind.IfKeyword:
@@ -644,7 +646,7 @@ public class Parser(List<SyntaxToken> tokens)
                 break;
         }
 
-        // ÏÂÃæÇø·Ö±í´ïÊ½Óï¾äºÍ±äÁ¿Ãû
+        // ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ö±ï¿½ï¿½ï¿½Ê½ï¿½ï¿½ï¿½Í±ï¿½ï¿½ï¿½ï¿½ï¿½
         if (IsLocalVarDecl())
         {
             var decl = ParseVariableDeclaration();
@@ -659,9 +661,9 @@ public class Parser(List<SyntaxToken> tokens)
     }
 
     /// <summary>
-    /// ÕâÃ´Çø·ÖÊÇÎª·ÀÖ¹¡°if (j != 0) int k;¡±
-    /// Í¬Ê±ÔÊĞí¡°if (_elements.Count == 0) throw new InvalidOperationException("Stack is empty.");¡±
-    /// ÎÄ·¨½Ó½üLL(1)¡£
+    /// ï¿½ï¿½Ã´ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Îªï¿½ï¿½Ö¹ï¿½ï¿½if (j != 0) int k;ï¿½ï¿½
+    /// Í¬Ê±ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½if (_elements.Count == 0) throw new InvalidOperationException("Stack is empty.");ï¿½ï¿½
+    /// ï¿½Ä·ï¿½ï¿½Ó½ï¿½LL(1)ï¿½ï¿½
     /// </summary>
     /// <returns></returns>
     /// <exception cref="NotImplementedException"></exception>
@@ -699,9 +701,9 @@ public class Parser(List<SyntaxToken> tokens)
     }
 
     /// <summary>
-    /// ½öÖ§³Ö±äÁ¿×÷Îª¿ØÖÆ±äÁ¿£¬»¹²»ÄÜÓÃ±í´ïÊ½¡£Óï·¨£º
+    /// ï¿½ï¿½Ö§ï¿½Ö±ï¿½ï¿½ï¿½ï¿½ï¿½Îªï¿½ï¿½ï¿½Æ±ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ã±ï¿½ï¿½ï¿½Ê½ï¿½ï¿½ï¿½ï·¨ï¿½ï¿½
     /// SwitchStatement -> SwitchKeyword OpenParenToken IdentifierName CloseParenToken OpenBraceToken SwitchSection* CloseBraceToken
-    /// Ò²ĞíÒÔºó¿ÉÒÔ¼ÓÉÏÖØ¸´±êÇ©¼ì²é£¿
+    /// Ò²ï¿½ï¿½ï¿½Ôºï¿½ï¿½ï¿½Ô¼ï¿½ï¿½ï¿½ï¿½Ø¸ï¿½ï¿½ï¿½Ç©ï¿½ï¿½é£¿
     /// </summary>
     /// <returns></returns>
     private SwitchStatementSyntax ParseSwitchStatement()
@@ -786,7 +788,7 @@ public class Parser(List<SyntaxToken> tokens)
     }
 
     /// <summary>
-    /// ³õÊ¼»¯Æ÷±ØĞëÊÇ±äÁ¿¶¨Òå¡£Ôİ²»Ö§³Ö¸üĞÂ²¿·Ö²ÉÓÃ¶ººÅ±í´ïÊ½¡£Óï·¨£º
+    /// ï¿½ï¿½Ê¼ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ç±ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½å¡£ï¿½İ²ï¿½Ö§ï¿½Ö¸ï¿½ï¿½Â²ï¿½ï¿½Ö²ï¿½ï¿½Ã¶ï¿½ï¿½Å±ï¿½ï¿½ï¿½Ê½ï¿½ï¿½ï¿½ï·¨ï¿½ï¿½
     /// ForStatement -> ForKeyword OpenParenToken VariableDeclaration SemicolonToken EXPRESSION SemicolonToken STATEMENT_EXPRESSION CloseParenToken Block
     /// </summary>
     /// <returns></returns>
@@ -817,8 +819,8 @@ public class Parser(List<SyntaxToken> tokens)
     }
 
     /// <summary>
-    /// if-elseĞü¹ÒÎÊÌâ!
-    /// ±¾ÊµÏÖÊ¹ÓÃ¾Í½üÔ­Ôò¡£
+    /// if-elseï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½!
+    /// ï¿½ï¿½Êµï¿½ï¿½Ê¹ï¿½Ã¾Í½ï¿½Ô­ï¿½ï¿½
     /// </summary>
     /// <returns></returns>
     private IfStatementSyntax ParseIfStatement()
@@ -842,7 +844,7 @@ public class Parser(List<SyntaxToken> tokens)
     }
 
     /// <summary>
-    /// RoslynÃ»ÓĞSTATEMENT_EXPRESSIONÕâÖÖÀàĞÍ£¬ĞèÒª×Ô¼º±æ±ğ¡£
+    /// RoslynÃ»ï¿½ï¿½STATEMENT_EXPRESSIONï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Í£ï¿½ï¿½ï¿½Òªï¿½Ô¼ï¿½ï¿½ï¿½ï¿½
     /// </summary>
     /// <returns></returns>
     /// <exception cref="NotImplementedException"></exception>
@@ -855,7 +857,7 @@ public class Parser(List<SyntaxToken> tokens)
     }
 
     /// <summary>
-    /// Ö§³Ö4ÖÖÄÜ¹»µ¥¶À³É¾äµÄ±í´ïÊ½¡£
+    /// Ö§ï¿½ï¿½4ï¿½ï¿½ï¿½Ü¹ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½É¾ï¿½Ä±ï¿½ï¿½ï¿½Ê½ï¿½ï¿½
     /// </summary>
     /// <returns></returns>
     /// <exception cref="NotImplementedException"></exception>
@@ -889,7 +891,7 @@ public class Parser(List<SyntaxToken> tokens)
     }
 
     /// <summary>
-    /// Óï·¨£º
+    /// ï¿½ï·¨ï¿½ï¿½
     /// SimpleAssignmentExpression -> (IdentifierName | ElementAccessExpression) EqualsToken EXPRESSION;
     /// </summary>
     /// <returns></returns>
@@ -913,7 +915,7 @@ public class Parser(List<SyntaxToken> tokens)
     }
 
     /// <summary>
-    /// Ä¿Ç°½öÖ§³Ö£º
+    /// Ä¿Ç°ï¿½ï¿½Ö§ï¿½Ö£ï¿½
     /// ElementAccessExpression -> IdentifierName BracketedArgumentList;
     /// BracketedArgumentList -> OpenBracketToken Argument CloseBracketToken;
     /// </summary>
@@ -964,8 +966,8 @@ public class Parser(List<SyntaxToken> tokens)
         }
     }
     /// <summary>
-    /// ÕâĞ©ÖĞ×º±í´ïÊ½ÊÇÓÒ½áºÏµÄ£¬·½±ã¹éÔ¼·ÖÎö¡£
-    /// ²»Ö§³ÖÇ¶ÈëµÄ¸³Öµ±í´ïÊ½¡£
+    /// ï¿½ï¿½Ğ©ï¿½ï¿½×ºï¿½ï¿½ï¿½ï¿½Ê½ï¿½ï¿½ï¿½Ò½ï¿½ÏµÄ£ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ô¼ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
+    /// ï¿½ï¿½Ö§ï¿½ï¿½Ç¶ï¿½ï¿½Ä¸ï¿½Öµï¿½ï¿½ï¿½ï¿½Ê½ï¿½ï¿½
     /// </summary>
     /// <returns></returns>
     private ExpressionSyntax ParseExpression()
@@ -1025,12 +1027,12 @@ public class Parser(List<SyntaxToken> tokens)
     /* ************************************************************ */
 
     /// <summary>
-    /// Ã»²é¸ÃÓÅÏÈ¼¶ÄÚ½áºÏÂÉ¾ßÌåÈçºÎ¡£ÎÒÊµÏÖÎª×ó½áºÏ¡£
+    /// Ã»ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½È¼ï¿½ï¿½Ú½ï¿½ï¿½ï¿½É¾ï¿½ï¿½ï¿½ï¿½ï¿½Î¡ï¿½ï¿½ï¿½Êµï¿½ï¿½Îªï¿½ï¿½ï¿½Ï¡ï¿½
     /// </summary>
     /// <returns></returns>
     private ExpressionSyntax ParseAtomExpression()
     {
-        // ÏÈ½â¾öËùÓĞµÄ×ÖÃæÖµµÈ¼òµ¥ÇéĞÎ
+        // ï¿½È½ï¿½ï¿½ï¿½ï¿½ï¿½Ğµï¿½ï¿½ï¿½ï¿½ï¿½Öµï¿½È¼ï¿½ï¿½ï¿½ï¿½ï¿½
         var kind = Current.Kind();
         switch (kind)
         {
@@ -1063,7 +1065,7 @@ public class Parser(List<SyntaxToken> tokens)
                 break;
         }
 
-        // LR·ÖÎö½â¾ö£º³ÉÔ±·ÃÎÊ¡¢¹ı³Ìµ÷ÓÃ¡¢±äÁ¿Ãû¡£
+        // LRï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ô±ï¿½ï¿½ï¿½Ê¡ï¿½ï¿½ï¿½ï¿½Ìµï¿½ï¿½Ã¡ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
         Stack<ExpressionSyntax> atoms = [];
         if (SyntaxFacts.IsPredefinedType(Current.Kind()))
         {
