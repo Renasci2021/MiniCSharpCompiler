@@ -2,7 +2,7 @@ using System;
 
 class Program
 {
-    static void Main()
+    public static void Main()
     {
         Console.WriteLine("Enter a string to check if it is a palindrome:");
         string input = Console.ReadLine();

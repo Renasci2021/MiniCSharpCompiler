@@ -2,7 +2,7 @@ using System;
 
 class Program
 {
-    static void Main()
+    public static void Main()
     {
         Console.WriteLine("Enter integers separated by spaces:");
         string input = Console.ReadLine();
