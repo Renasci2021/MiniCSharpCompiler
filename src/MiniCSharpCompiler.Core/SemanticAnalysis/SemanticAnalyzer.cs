@@ -345,7 +345,7 @@ public class SemanticAnalyzer
 
             case ElementAccessExpressionSyntax elementAccess:
                 // 递归分析数组访问表达式
-                return GetExpressionType(elementAccess.Expression);
+                return SyntaxKind.IntKeyword;
         }
 
         return SyntaxKind.None;
