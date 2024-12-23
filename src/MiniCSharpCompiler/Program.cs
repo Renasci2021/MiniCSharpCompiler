@@ -33,8 +33,6 @@ class Program
         var syntaxTokens = tokens.Select(token => token.ToSyntaxToken()).ToList();
         var parser = new Parser(syntaxTokens);
         var syntaxTree = parser.Parse();
-        // var parser = new StandardParser();
-        // var syntaxTree = parser.Parse(tokens);
 
         SyntaxPrinter.PrintSyntaxTree(syntaxTree, printTrivia: false);
         Console.WriteLine();
@@ -54,7 +52,7 @@ class Program
 
 #pragma warning disable IL3000 // Avoid accessing Assembly file path when publishing as a single file
         var references = new[]
-        {
+                {
             MetadataReference.CreateFromFile(typeof(object).Assembly.Location),
             MetadataReference.CreateFromFile(typeof(Console).Assembly.Location),
             MetadataReference.CreateFromFile(Path.Combine(Path.GetDirectoryName(typeof(System.Runtime.GCSettings).GetTypeInfo().Assembly.Location)!, "System.Runtime.dll"))
@@ -66,14 +64,5 @@ class Program
             syntaxTrees: [syntaxTreeRoslyn],
             references: references,
             options: new CSharpCompilationOptions(OutputKind.DynamicallyLinkedLibrary));
-
-        // 获取诊断信息
-        var roslynDiagnostics = compilation.GetDiagnostics();
-        Console.WriteLine($"Roslyn 诊断发现 {roslynDiagnostics.Length} 个问题：");
-        foreach (var diagnostic in roslynDiagnostics)
-        {
-            Console.WriteLine($"{diagnostic.Location}: {diagnostic.GetMessage()}");
-        }
-        Console.WriteLine();
     }
 }
